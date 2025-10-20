@@ -21,20 +21,32 @@ backend/
 
 ## 🚀 Installation rapide
 
+### Pour les nouveaux développeurs qui clonent le projet :
+
 ```bash
-cd backend
+# 1. Cloner le projet
+git clone <url-du-repo>
+cd Hackathon-grippe/backend
 
-# 1. Créer environnement virtuel
+# 2. Créer un environnement virtuel (OBLIGATOIRE)
 python3 -m venv venv
-source venv/bin/activate  # macOS/Linux
-# venv\Scripts\activate   # Windows
 
-# 2. Installer dépendances
+# 3. Activer l'environnement virtuel
+source venv/bin/activate      # macOS/Linux
+# OU
+venv\Scripts\activate         # Windows
+
+# 4. Installer les dépendances
 pip install -r requirements.txt
 
-# 3. Lancer le serveur
+# 5. Lancer le serveur
 uvicorn app.main:app --reload
 ```
+
+**⚠️ IMPORTANT** : 
+- Le dossier `venv/` n'est PAS inclus dans git (ignoré par `.gitignore`)
+- Chaque développeur DOIT créer son propre `venv/` localement
+- Ne JAMAIS commiter le dossier `venv/` sur git
 
 ## 🔌 API disponible
 
