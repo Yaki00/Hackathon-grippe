@@ -1,4 +1,2 @@
-"""
-Backend application for flu vaccination strategy.
-"""
+# Backend API Grippe
 
