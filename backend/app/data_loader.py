@@ -7,6 +7,52 @@ from pathlib import Path
 import json
 
 DATA_DIR = Path(__file__).parent.parent / "data" / "datagouve"
+COUVERTURE_VACCINAL_DIR = DATA_DIR / "couverture_vaccinal"
+
+
+def charger_couverture_historique_region():
+    """
+    Charge les données de couverture vaccinale historique par région depuis Santé Publique France.
+    Ces données contiennent les VRAIS taux de couverture vaccinale en pourcentages.
+    
+    Returns:
+        DataFrame avec colonnes: an_mesure, reg, reglib, grip_moins65, grip_65plus, grip_6574, grip_75plus
+    """
+    try:
+        chemin = COUVERTURE_VACCINAL_DIR / "couvertures-vaccinales-des-adolescents-et-adultes-depuis-2011-region.json"
+        if chemin.exists():
+            with open(chemin, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+            df = pd.DataFrame(data)
+            return df
+        else:
+            print(f"❌ Fichier historique région introuvable: {chemin}")
+            return pd.DataFrame()
+    except Exception as e:
+        print(f"❌ Erreur chargement données historiques région: {e}")
+        return pd.DataFrame()
+
+
+def charger_couverture_historique_france():
+    """
+    Charge les données de couverture vaccinale historique nationale depuis Santé Publique France.
+    
+    Returns:
+        DataFrame avec colonnes: an_mesure, grip_moins65, grip_65plus, grip_6574, grip_75plus
+    """
+    try:
+        chemin = COUVERTURE_VACCINAL_DIR / "couvertures-vaccinales-des-adolescents-et-adultes-depuis-2011-france.json"
+        if chemin.exists():
+            with open(chemin, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+            df = pd.DataFrame(data)
+            return df
+        else:
+            print(f"❌ Fichier historique France introuvable: {chemin}")
+            return pd.DataFrame()
+    except Exception as e:
+        print(f"❌ Erreur chargement données historiques France: {e}")
+        return pd.DataFrame()
 
 
 def charger_fichier_local(annee: str, type_fichier: str):
@@ -85,32 +131,196 @@ def extraire_taux_couverture_region(df, code_region):
         return None
 
 
+def extraire_donnees_doses_region(df, code_region):
+    """
+    Extrait les données de doses et prescriptions d'une région depuis le DataFrame.
+    
+    Returns:
+        dict avec doses_distribuees, actes_vaccination, taux_utilisation
+    """
+    if df.empty:
+        return None
+    
+    try:
+        # Filtrer par code région
+        code_int = int(code_region)
+        region_data = df[df['code'] == code_int]
+        
+        if region_data.empty:
+            return None
+        
+        # Séparer par groupe d'âge
+        moins_65 = region_data[region_data['groupe'] == 'moins de 65 ans']
+        plus_65 = region_data[region_data['groupe'] == '65 ans et plus']
+        
+        # Calculer totaux
+        doses_moins_65 = moins_65[moins_65['variable'] == 'DOSES(J07E1)']['valeur'].sum()
+        actes_moins_65 = moins_65[moins_65['variable'] == 'ACTE(VGP)']['valeur'].sum()
+        
+        doses_plus_65 = plus_65[plus_65['variable'] == 'DOSES(J07E1)']['valeur'].sum()
+        actes_plus_65 = plus_65[plus_65['variable'] == 'ACTE(VGP)']['valeur'].sum()
+        
+        # Totaux généraux
+        total_doses = doses_moins_65 + doses_plus_65
+        total_actes = actes_moins_65 + actes_plus_65
+        
+        # Taux d'utilisation des doses
+        taux_utilisation = (total_actes / total_doses * 100) if total_doses > 0 else 0
+        
+        return {
+            "doses_distribuees": {
+                "moins_65_ans": int(doses_moins_65),
+                "plus_65_ans": int(doses_plus_65),
+                "total": int(total_doses)
+            },
+            "actes_vaccination": {
+                "moins_65_ans": int(actes_moins_65),
+                "plus_65_ans": int(actes_plus_65),
+                "total": int(total_actes)
+            },
+            "taux_utilisation_doses": round(taux_utilisation, 1),
+            "doses_non_utilisees": int(total_doses - total_actes)
+        }
+        
+    except Exception as e:
+        print(f"⚠️  Erreur extraction doses région {code_region}: {e}")
+        return None
+
+
+def get_taux_couverture_reel_region(code_region, annee="2024"):
+    """
+    Récupère le taux de couverture vaccinale REEL depuis les données Santé Publique France.
+    Ces données sont des pourcentages directs, pas des calculs.
+    
+    Returns:
+        dict avec taux_moins_65, taux_65_plus, taux_global
+    """
+    try:
+        df_historique = charger_couverture_historique_region()
+        
+        if df_historique.empty:
+            return None
+        
+        # Filtrer par région et année
+        region_data = df_historique[
+            (df_historique['reg'] == str(code_region)) & 
+            (df_historique['an_mesure'] == annee)
+        ]
+        
+        if region_data.empty:
+            return None
+        
+        # Extraire les taux (déjà en pourcentages)
+        taux_moins_65 = region_data['grip_moins65'].iloc[0]
+        taux_65_plus = region_data['grip_65plus'].iloc[0]
+        taux_6574 = region_data.get('grip_6574', pd.Series([None])).iloc[0]
+        taux_75plus = region_data.get('grip_75plus', pd.Series([None])).iloc[0]
+        
+        # Convertir None en valeurs utilisables
+        taux_moins_65 = float(taux_moins_65) if pd.notna(taux_moins_65) else None
+        taux_65_plus = float(taux_65_plus) if pd.notna(taux_65_plus) else None
+        taux_6574 = float(taux_6574) if pd.notna(taux_6574) else None
+        taux_75plus = float(taux_75plus) if pd.notna(taux_75plus) else None
+        
+        # Calculer taux global (moyenne pondérée approximative)
+        if taux_moins_65 and taux_65_plus:
+            taux_global = (taux_moins_65 * 0.7 + taux_65_plus * 0.3)  # Approximation
+        elif taux_65_plus:
+            taux_global = taux_65_plus
+        elif taux_moins_65:
+            taux_global = taux_moins_65
+        else:
+            taux_global = None
+        
+        return {
+            "taux_moins_65": taux_moins_65,
+            "taux_65_plus": taux_65_plus,
+            "taux_65_74": taux_6574,
+            "taux_75_plus": taux_75plus,
+            "taux_global": round(taux_global, 1) if taux_global else None,
+            "source": "Santé Publique France (données officielles)",
+            "annee": annee
+        }
+        
+    except Exception as e:
+        print(f"⚠️  Erreur extraction taux réel région {code_region}: {e}")
+        return None
+
+
 def get_donnees_vaccination_region(code_region, annee="2024"):
     """
     Récupère les données de vaccination d'une région.
-    Combine fichiers locaux + APIs si disponibles.
+    Priorité aux données officielles Santé Publique France.
     
     Returns:
         dict avec taux, nombre_vaccines, etc.
     """
-    # 1. Essayer fichiers locaux
+    # 1. PRIORITE: Données officielles Santé Publique France (taux réels en %)
+    taux_reel = get_taux_couverture_reel_region(code_region, annee)
+    
+    if taux_reel is not None:
+        return taux_reel
+    
+    # 2. Fallback: Essayer calcul depuis fichiers IQVIA
     df_couverture = charger_fichier_local(annee, "couverture")
     taux_local = extraire_taux_couverture_region(df_couverture, code_region)
     
-    # 2. TODO: Ajouter appel API pour données temps réel
-    # taux_api = appeler_api_couverture(code_region)
-    
-    # 3. Prendre la meilleure source
     if taux_local is not None:
         return {
             "taux_vaccination": taux_local,
+            "source": "IQVIA (calcul approximatif)",
+            "annee": annee,
+            "avertissement": "Données IQVIA en milliers - taux calculé approximatif"
+        }
+    
+    # 3. Dernier recours: simuler
+    return {
+        "taux_vaccination": 55.0 + (hash(code_region) % 20),
+        "source": "simule",
+        "annee": annee,
+        "avertissement": "Données simulées - non fiables"
+    }
+
+
+def get_donnees_doses_region(code_region, annee="2024"):
+    """
+    Récupère les données de doses et prescriptions d'une région.
+    
+    Returns:
+        dict avec doses distribuées, actes, taux d'utilisation
+    """
+    # 1. Charger données de couverture (contient doses et actes)
+    df_couverture = charger_fichier_local(annee, "couverture")
+    donnees_doses = extraire_donnees_doses_region(df_couverture, code_region)
+    
+    # 2. TODO: Ajouter données temps réel si disponibles
+    # donnees_api = appeler_api_doses(code_region)
+    
+    # 3. Retourner données ou simulation
+    if donnees_doses is not None:
+        return {
+            **donnees_doses,
             "source": "fichier_local",
             "annee": annee
         }
     else:
         # Fallback: simuler si pas de données
+        base_doses = 5000 + (hash(code_region) % 3000)
+        base_actes = int(base_doses * 0.7)  # 70% d'utilisation
+        
         return {
-            "taux_vaccination": 55.0 + (hash(code_region) % 20),
+            "doses_distribuees": {
+                "moins_65_ans": int(base_doses * 0.3),
+                "plus_65_ans": int(base_doses * 0.7),
+                "total": base_doses
+            },
+            "actes_vaccination": {
+                "moins_65_ans": int(base_actes * 0.3),
+                "plus_65_ans": int(base_actes * 0.7),
+                "total": base_actes
+            },
+            "taux_utilisation_doses": 70.0,
+            "doses_non_utilisees": base_doses - base_actes,
             "source": "simule",
             "annee": annee
         }
