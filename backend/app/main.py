@@ -9,6 +9,7 @@ import logging
 from app.core.data_loader import data_loader
 from app.core.urgences_api import urgences_api
 from app.core.couverture_api import couverture_api
+from app.routers import zones_router
 
 # Configuration logging
 logging.basicConfig(level=logging.INFO)
@@ -38,6 +39,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Router pour les zones A, B1, B2
+app.include_router(zones_router.router, prefix="/api")
 
 
 # ============================================
