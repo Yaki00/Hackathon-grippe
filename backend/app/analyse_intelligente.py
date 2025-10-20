@@ -22,6 +22,9 @@ OBJECTIF_NATIONAL_65PLUS = 75.0  # 75% de couverture pour les 65+
 OLLAMA_URL = "http://localhost:11434/api/generate"
 OLLAMA_MODEL = "llama3.2"  # ou mistral, phi3, etc.
 
+# Cache simple pour éviter de recharger les gros fichiers
+_CACHE = {}
+
 
 # =============================================================================
 # FONCTION OLLAMA - AGENT IA LOCAL
@@ -38,6 +41,10 @@ def appeler_agent_ia(prompt: str, temperature: float = 0.7) -> str:
     Returns:
         Réponse de l'IA
     """
+    # DÉSACTIVÉ TEMPORAIREMENT pour accélérer les tests
+    # Retirer ce return pour réactiver l'IA
+    return "⚠️ IA désactivée pour performance. Activer dans analyse_intelligente.py"
+    
     try:
         payload = {
             "model": OLLAMA_MODEL,
@@ -63,6 +70,18 @@ def appeler_agent_ia(prompt: str, temperature: float = 0.7) -> str:
         return f"⚠️ Erreur IA: {str(e)}"
 
 
+def charger_donnees_avec_cache(chemin: Path, cache_key: str) -> pd.DataFrame:
+    """Charge un fichier JSON avec cache pour éviter rechargements"""
+    if cache_key in _CACHE:
+        return _CACHE[cache_key]
+    
+    with open(chemin, 'r', encoding='utf-8') as f:
+        data = json.load(f)
+    df = pd.DataFrame(data)
+    _CACHE[cache_key] = df
+    return df
+
+
 # =============================================================================
 # OBJECTIF 1 : IDENTIFIER ZONES SOUS-VACCINÉES
 # =============================================================================
@@ -78,11 +97,9 @@ def identifier_zones_sous_vaccinees(annee: str = "2024", seuil_critique: float =
     Returns:
         Analyse complète avec recommandations IA
     """
-    # 1. Charger données régionales
+    # 1. Charger données régionales AVEC CACHE
     chemin = COUVERTURE_VACCINAL_DIR / "couvertures-vaccinales-des-adolescents-et-adultes-depuis-2011-region.json"
-    with open(chemin, 'r', encoding='utf-8') as f:
-        data = json.load(f)
-    df = pd.DataFrame(data)
+    df = charger_donnees_avec_cache(chemin, "couverture_region")
     
     # 2. Filtrer année cible
     df_annee = df[df['an_mesure'] == annee].copy()

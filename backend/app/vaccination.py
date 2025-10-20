@@ -95,7 +95,7 @@ def get_statistiques_nationales(annee: str = "2024"):
         "nombre_vaccines": total_vaccines,
         "taux_national": round(taux_national, 1),
         "objectif": 70.0,
-        "zones_a_risque": [z["zone"] for z in zones if z["taux_vaccination"] < 60.0]
+        "zones_a_risque": [z["zone"] for z in zones if z.get("taux_vaccination", 100) < 60.0]
     }
 
 
