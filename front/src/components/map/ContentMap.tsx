@@ -324,35 +324,6 @@ export default function ContentMap() {
                   </div>
                 </div>
               </Col>
-
-              {selectedRegion !== "all" && (
-                <Col>
-                  <div
-                    style={{
-                      background: "linear-gradient(135deg, #1e40af, #3b82f6)",
-                      border: "1px solid rgba(59, 130, 246, 0.5)",
-                      borderRadius: "16px",
-                      padding: "12px 20px",
-                      boxShadow: "0 4px 12px rgba(30, 64, 175, 0.3)",
-                      backdropFilter: "blur(10px)",
-                    }}
-                  >
-                    <Text
-                      strong
-                      style={{
-                        color: "#ffffff",
-                        fontSize: 15,
-                        whiteSpace: "nowrap",
-                        fontWeight: 700,
-                        textShadow: "0 1px 2px rgba(0, 0, 0, 0.3)",
-                      }}
-                    >
-                      🗺️{" "}
-                      {REGIONS.find((r) => r.value === selectedRegion)?.label}
-                    </Text>
-                  </div>
-                </Col>
-              )}
             </Row>
           </Card>
 
