@@ -6,6 +6,7 @@ import { Map } from "react-map-gl";
 import type { Feature, FeatureCollection } from "geojson";
 import france from "../data/france.json";
 import regionsData from "../data/regions.json";
+import departementsData from "../data/departements.json";
 import { MapView } from "@deck.gl/core";
 
 // Extrait la France métropolitaine + Corse (polygones en Europe)
@@ -80,13 +81,16 @@ function buildCountryMask(country: Feature | FeatureCollection): Feature {
 const INITIAL_VIEW_STATE = {
   longitude: 2.3522,
   latitude: 48.8566,
-  zoom: 3,
+  zoom: 10,
   minZoom: 2,
   maxZoom: 10,
   pitch: 10,
   maxPitch: 60,
   bearing: 0,
 } as const;
+
+// Durée de transition pour les animations de zoom/dézoom (en millisecondes)
+const TRANSITION_DURATION = 1500;
 
 const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_TOKEN as string;
 
@@ -114,14 +118,34 @@ function extractZone(data: FeatureCollection, code: string): Feature | null {
   return zone || null;
 }
 
-// Calcule le centre et le zoom pour une zone donnée
-function getViewStateForZone(zone: Feature | null): {
+// Niveaux de zoom personnalisés pour chaque région
+const REGION_ZOOM_LEVELS: Record<string, number> = {
+  "84": 6.2, // Auvergne-Rhône-Alpes (grande région)
+  "27": 6.8, // Bourgogne-Franche-Comté (moyenne)
+  "53": 7.5, // Bretagne (compacte)
+  "24": 7.0, // Centre-Val de Loire (moyenne)
+  "94": 8.5, // Corse (petite île)
+  "44": 6.0, // Grand Est (très grande)
+  "32": 6.5, // Hauts-de-France (grande)
+  "11": 7.8, // Île-de-France (compacte mais importante)
+  "28": 7.2, // Normandie (moyenne)
+  "75": 5.8, // Nouvelle-Aquitaine (très grande)
+  "76": 6.3, // Occitanie (grande)
+  "52": 7.0, // Pays de la Loire (moyenne)
+  "93": 6.8, // Provence-Alpes-Côte d'Azur (moyenne-grande)
+};
+
+// Calcule le centre et le zoom pour une zone donnée avec des niveaux optimisés par région
+function getViewStateForZone(
+  zone: Feature | null,
+  regionCode?: string
+): {
   longitude: number;
   latitude: number;
   zoom: number;
 } {
   if (!zone || !zone.geometry) {
-    return { longitude: 2.3522, latitude: 46.8566, zoom: 5 };
+    return { longitude: 2.3522, latitude: 46.3, zoom: 4.5 };
   }
 
   // Calculer le centre approximatif du bounding box
@@ -133,7 +157,7 @@ function getViewStateForZone(zone: Feature | null): {
       : [];
 
   if (coords.length === 0) {
-    return { longitude: 2.3522, latitude: 46.8566, zoom: 5 };
+    return { longitude: 2.3522, latitude: 46.3, zoom: 4.5 };
   }
 
   let minLon = Infinity,
@@ -152,17 +176,23 @@ function getViewStateForZone(zone: Feature | null): {
   const longitude = (minLon + maxLon) / 2;
   const latitude = (minLat + maxLat) / 2;
 
-  // Calculer un zoom adapté à la taille de la zone
-  const lonDiff = maxLon - minLon;
-  const latDiff = maxLat - minLat;
-  const maxDiff = Math.max(lonDiff, latDiff);
-
+  // Utiliser le niveau de zoom personnalisé si disponible, sinon calculer automatiquement
   let zoom = 5;
-  if (maxDiff < 0.5) zoom = 10;
-  else if (maxDiff < 1) zoom = 9;
-  else if (maxDiff < 2) zoom = 8;
-  else if (maxDiff < 4) zoom = 7;
-  else if (maxDiff < 6) zoom = 6;
+  if (regionCode && REGION_ZOOM_LEVELS[regionCode]) {
+    zoom = REGION_ZOOM_LEVELS[regionCode];
+  } else {
+    // Calcul automatique pour les cas non définis
+    const lonDiff = maxLon - minLon;
+    const latDiff = maxLat - minLat;
+    const maxDiff = Math.max(lonDiff, latDiff);
+
+    if (maxDiff < 0.3) zoom = 9.5; // Très petites zones
+    else if (maxDiff < 0.6) zoom = 8.5; // Petites zones
+    else if (maxDiff < 1.2) zoom = 7.5; // Zones moyennes
+    else if (maxDiff < 2.5) zoom = 6.5; // Grandes zones
+    else if (maxDiff < 4) zoom = 5.5; // Très grandes zones
+    else zoom = 4.5; // France entière
+  }
 
   return { longitude, latitude, zoom };
 }
@@ -219,12 +249,12 @@ export default function MapTest({
   // Calculer le viewState dynamique (position et zoom seulement)
   const dynamicViewState = useMemo(() => {
     if (selectedRegion && selectedRegion !== "all") {
-      return getViewStateForZone(currentZone);
+      return getViewStateForZone(currentZone, selectedRegion);
     }
-    return { longitude: 2.3522, latitude: 46.8566, zoom: 5 };
+    return { longitude: 2.3522, latitude: 46.3, zoom: 4.5 };
   }, [currentZone, selectedRegion]);
 
-  // Mettre à jour la vue quand les props ou la zone changent
+  // Mettre à jour la vue avec transition fluide quand les props ou la zone changent
   useEffect(() => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     setViewState((prev: any) => ({
@@ -232,6 +262,8 @@ export default function MapTest({
       ...dynamicViewState,
       pitch: pitch ?? prev.pitch,
       bearing: bearing ?? prev.bearing,
+      // Ajouter la durée de transition pour les animations fluides
+      transitionDuration: TRANSITION_DURATION,
     }));
   }, [dynamicViewState, pitch, bearing]);
 
@@ -288,6 +320,48 @@ export default function MapTest({
     [zoneForBorder, colorMode]
   );
 
+  // Couche pour les frontières des régions (toujours visible)
+  const regionsBorderLayer = useMemo(
+    () =>
+      new GeoJsonLayer({
+        id: "regions-border",
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        data: regionsData as any,
+        stroked: true,
+        filled: false,
+        getLineColor: colorMode
+          ? [100, 150, 255, 200] // bleu clair en mode couleur
+          : [150, 150, 150, 200], // gris moyen en mode normal
+        getLineWidth: 1.5,
+        lineWidthMinPixels: 1,
+        lineWidthMaxPixels: 3,
+        pickable: false,
+        visible: true, // Toujours visible
+      }),
+    [colorMode]
+  );
+
+  // Couche pour les frontières des départements (visible seulement au zoom 2+)
+  const departementsBorderLayer = useMemo(
+    () =>
+      new GeoJsonLayer({
+        id: "departements-border",
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        data: departementsData as any,
+        stroked: true,
+        filled: false,
+        getLineColor: colorMode
+          ? [255, 200, 100, 150] // orange clair en mode couleur
+          : [120, 120, 120, 150], // gris foncé en mode normal
+        getLineWidth: 1,
+        lineWidthMinPixels: 0.5,
+        lineWidthMaxPixels: 2,
+        pickable: false,
+        visible: viewState.zoom >= 2, // Visible seulement au zoom 2 ou plus
+      }),
+    [colorMode, viewState.zoom]
+  );
+
   return (
     <DeckGL
       views={[new MapView({ id: "map", controller: true })]}
@@ -295,8 +369,16 @@ export default function MapTest({
       onViewStateChange={({ viewState: newViewState }) =>
         setViewState(newViewState)
       }
-      controller={{ dragRotate: true }}
-      layers={[maskLayer, zoneLayer, ...points]}
+      controller={{
+        dragRotate: true,
+      }}
+      layers={[
+        maskLayer,
+        zoneLayer,
+        regionsBorderLayer,
+        departementsBorderLayer,
+        ...points,
+      ]}
       style={{ width: "100%", height: "100%" }}
     >
       <Map
@@ -308,6 +390,7 @@ export default function MapTest({
         }
         style={{ background: "#121c21" }}
         cooperativeGestures
+        {...({ projection: "mercator" } as Record<string, unknown>)}
       />
     </DeckGL>
   );
