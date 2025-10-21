@@ -1,72 +1,76 @@
-# Backend API Stratégie Vaccinale Grippe 🏥
+# Backend API Grippe 💉
 
-Backend FastAPI simple - à compléter progressivement.
+Backend FastAPI pour la stratégie vaccinale grippe.
+
+## 🚀 Installation
+
+```bash
+# 1. Créer environnement virtuel
+python3 -m venv venv
+source venv/bin/activate  # macOS/Linux
+
+# 2. Installer dépendances
+pip install -r requirements.txt
+```
+
+## ▶️ Démarrage
+
+```bash
+cd backend
+source venv/bin/activate
+uvicorn app.main:app --reload --port 8000
+```
+
+API disponible sur : http://localhost:8000
+
+Documentation : http://localhost:8000/docs
+
+## 📊 Partie 1 : VACCINATION
+
+### Endpoints disponibles
+
+#### 1. Taux par zone
+```bash
+GET /vaccination/zones?annee=2024
+```
+
+Retourne les taux de vaccination pour les 3 zones (A, B1, B2).
+
+#### 2. Détails d'une zone
+```bash
+GET /vaccination/zone/A?annee=2024
+GET /vaccination/zone/B?annee=2024
+GET /vaccination/zone/C?annee=2024
+```
+
+#### 3. Statistiques nationales
+```bash
+GET /vaccination/national?annee=2024
+```
+
+## 🗺️ Zones
+
+- **Zone A** : IDF + grandes métropoles (Paris, Lyon, Marseille, Toulouse, Bordeaux)
+- **Zone B** : Grandes agglomérations (Lille, Strasbourg, Rennes, Nantes)
+- **Zone C** : Reste de la France
 
 ## 📁 Structure
 
 ```
 backend/
 ├── app/
-│   ├── main.py              # Application FastAPI (point d'entrée)
-│   ├── core/                # Configuration (à ajouter)
-│   ├── routers/             # Routes API (à ajouter)
-│   ├── schemas/             # Schémas Pydantic (à ajouter)
-│   ├── ingestion/           # Chargement données (à ajouter)
-│   ├── transformation/      # Nettoyage données (à ajouter)
-│   └── prediction/          # Modèle prédiction (à ajouter)
-├── data/                    # Fichiers CSV/JSON (à ajouter)
-├── requirements.txt         # Dépendances Python
-└── README.md               # Ce fichier
+│   ├── __init__.py
+│   ├── main.py          # API FastAPI
+│   ├── config.py        # Configuration zones
+│   └── vaccination.py   # Module vaccination
+├── data/                # Données CSV/JSON
+├── requirements.txt
+└── README.md
 ```
 
-## 🚀 Installation rapide
+## 🔜 Prochaines parties
 
-### Pour les nouveaux développeurs qui clonent le projet :
+- Partie 2 : Urgences
+- Partie 3 : Distribution
+- Partie 4 : Prédictions
 
-```bash
-# 1. Cloner le projet
-git clone <url-du-repo>
-cd Hackathon-grippe/backend
-
-# 2. Créer un environnement virtuel (OBLIGATOIRE)
-python3 -m venv venv
-
-# 3. Activer l'environnement virtuel
-source venv/bin/activate      # macOS/Linux
-# OU
-venv\Scripts\activate         # Windows
-
-# 4. Installer les dépendances
-pip install -r requirements.txt
-
-# 5. Lancer le serveur
-uvicorn app.main:app --reload
-```
-
-**⚠️ IMPORTANT** : 
-- Le dossier `venv/` n'est PAS inclus dans git (ignoré par `.gitignore`)
-- Chaque développeur DOIT créer son propre `venv/` localement
-- Ne JAMAIS commiter le dossier `venv/` sur git
-
-## 🔌 API disponible
-
-Une fois lancé, accédez à :
-- **API** : http://localhost:8000
-- **Documentation interactive** : http://localhost:8000/docs
-- **Health check** : http://localhost:8000/health
-
-## 📝 Prochaines étapes
-
-1. Ajouter les endpoints API dans `app/main.py`
-2. Créer les schémas Pydantic dans `app/schemas/`
-3. Ajouter les données dans `data/`
-4. Implémenter la logique métier
-
-## 🧪 Test rapide
-
-```bash
-# Vérifier que ça fonctionne
-curl http://localhost:8000/health
-```
-
-**Prêt à ajouter vos endpoints et données ! 🎉**
