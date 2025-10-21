@@ -28,6 +28,7 @@ from app.couverture_vaccins import (
     get_grippe_national,
     get_grippe_regional,
     get_grippe_departemental,
+    get_grippe_par_zones,
     # Utilitaires
     get_annees_disponibles,
     get_liste_regions,
@@ -128,6 +129,7 @@ def root():
                 "national": "/couverture/grippe/national",
                 "regional": "/couverture/grippe/regional",
                 "regional_detail": "/couverture/grippe/regional/{code_region}",
+                "par_zones": "/couverture/grippe/zones",
                 "departemental": "/couverture/grippe/departemental",
                 "departemental_detail": "/couverture/grippe/departemental/{code_dept}"
             },
@@ -658,6 +660,37 @@ def get_couverture_grippe_regional_detail(code_region: str, annee: str = None):
     """
     try:
         data = get_grippe_regional(code_region=code_region, annee=annee)
+        return {
+            "success": True,
+            "data": data
+        }
+    except Exception as e:
+        return {
+            "success": False,
+            "error": str(e)
+        }
+
+
+@app.get("/couverture/grippe/zones")
+def get_couverture_grippe_par_zones(annee: str = None):
+    """
+    **🦠 Couverture grippe groupée par zones (A, B, C)**
+    
+    Regroupe les régions par zones géographiques :
+    - Zone A : Grandes métropoles (Île-de-France, Auvergne-Rhône-Alpes, etc.)
+    - Zone B : Agglomérations moyennes 
+    - Zone C : Reste de la France
+    
+    **Paramètres** :
+    - `annee` : Année spécifique ou None pour toutes
+    
+    **Retourne** :
+    - Données groupées par zone
+    - Statistiques moyennes par zone
+    - Liste des régions dans chaque zone
+    """
+    try:
+        data = get_grippe_par_zones(annee=annee)
         return {
             "success": True,
             "data": data
