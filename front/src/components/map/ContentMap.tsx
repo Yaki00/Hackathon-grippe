@@ -411,80 +411,87 @@ export default function ContentMap() {
       </style>
       <Layout
         style={{
-          height: "100vh",
+          height: "70vh",
           background: "#121c21",
         }}
       >
-        <Header
-          style={{
-            background: "#1f2937",
-            borderBottom: "1px solid rgba(255, 255, 255, 0.1)",
-            padding: "0 40px",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            minHeight: "80px",
-          }}
-        >
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              width: "100%",
-              maxWidth: "1600px",
+        <div style={{ display: "flex", gap: "10px" }}>
+          <Select
+            value={selectedFilter}
+            onChange={(value) => {
+              setSelectedFilter(value);
             }}
-          >
-            <Space align="center" size="large">
-              <div
-                style={{
-                  background: "linear-gradient(135deg, #40a9ff, #1890ff)",
-                  borderRadius: "50%",
-                  padding: "12px",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  boxShadow: "0 4px 12px rgba(64, 169, 255, 0.3)",
-                }}
-              >
-                <EnvironmentOutlined
-                  style={{ fontSize: 32, color: "#ffffff" }}
-                />
-              </div>
-              <div style={{ textAlign: "center" }}>
-                <Title
-                  level={1}
-                  style={{
-                    margin: 0,
-                    color: "#ffffff",
-                    fontWeight: 800,
-                    fontSize: "32px",
-                    letterSpacing: "-0.5px",
-                    textShadow: "0 2px 4px rgba(0, 0, 0, 0.3)",
-                    background: "linear-gradient(135deg, #ffffff, #e6f7ff)",
-                    WebkitBackgroundClip: "text",
-                    WebkitTextFillColor: "transparent",
-                    backgroundClip: "text",
-                  }}
-                >
-                  Carte Interactive France
-                </Title>
-                <Text
-                  style={{
-                    fontSize: 16,
-                    color: "rgba(255, 255, 255, 0.85)",
-                    fontWeight: 500,
-                    marginTop: "4px",
-                    display: "block",
-                  }}
-                >
-                  📊 Visualisez les données par région ou département
-                </Text>
-              </div>
-            </Space>
-          </div>
-        </Header>
-
+            style={{
+              width: 220,
+              borderRadius: "8px",
+              color: "white",
+              background: "transparent",
+            }}
+            dropdownStyle={{
+              background: "transparent",
+              color: "white",
+            }}
+            options={filterOptions.map((o) => ({
+              ...o,
+              label: <span style={{ color: "white" }}>{o.label}</span>,
+            }))}
+            placeholder="Sélectionner..."
+            size="middle"
+          />
+          <Select
+            value={selectedRegion}
+            onChange={handleRegionChange}
+            style={{
+              width: 220,
+              borderRadius: 8,
+              color: "white",
+              background: "transparent",
+            }}
+            dropdownStyle={{
+              background: "transparent",
+              color: "white",
+            }}
+            optionLabelProp="label"
+            options={REGIONS.map((r) => ({
+              ...r,
+              label: <span style={{ color: "white" }}>{r.label}</span>,
+            }))}
+            placeholder="Choisir une région"
+            size="middle"
+          />
+          <Select
+            value={selectedYear}
+            onChange={(value) => {
+              console.log("🔄 Changement d'année:", value);
+              setSelectedYear(value);
+            }}
+            style={{
+              width: 220,
+              borderRadius: "8px",
+              color: "white",
+              background: "transparent",
+            }}
+            dropdownStyle={{
+              background: "transparent",
+              color: "white",
+            }}
+            options={availableYears.map((y) => ({
+              ...y,
+              label: <span style={{ color: "white" }}>{y.label}</span>,
+            }))}
+            placeholder="Sélectionner..."
+            size="middle"
+          />
+          <Switch
+            checked={colorMode}
+            onChange={setColorMode}
+            checkedChildren="ON"
+            unCheckedChildren="OFF"
+            style={{
+              backgroundColor: colorMode ? "#40a9ff" : "#434343",
+            }}
+          />
+        </div>
         <Content
           style={{
             padding: "20px",
@@ -492,7 +499,6 @@ export default function ContentMap() {
             display: "flex",
             justifyContent: "center",
             alignItems: "center",
-            minHeight: "calc(100vh - 80px)",
           }}
         >
           <Card
@@ -501,11 +507,9 @@ export default function ContentMap() {
               width: "100%",
               maxWidth: "1600px",
               height: "100%",
-              borderRadius: 16,
-              boxShadow: "0 8px 32px rgba(0, 0, 0, 0.4)",
+              border: "none",
               overflow: "hidden",
               background: "linear-gradient(135deg, #1f2937, #374151)",
-              border: "1px solid rgba(255, 255, 255, 0.1)",
             }}
             bodyStyle={{
               padding: 0,
@@ -514,255 +518,6 @@ export default function ContentMap() {
               flexDirection: "column",
             }}
           >
-            {/* Barre de contrôle en haut de la carte */}
-            <Card
-              size="small"
-              style={{
-                margin: 0,
-                borderRadius: 0,
-                background: "linear-gradient(135deg, #374151, #4b5563)",
-                borderBottom: "1px solid rgba(255, 255, 255, 0.1)",
-                boxShadow: "0 2px 8px rgba(0, 0, 0, 0.2)",
-              }}
-              bodyStyle={{ padding: "20px 32px" }}
-            >
-              <Row gutter={[24, 16]} align="middle" justify="center">
-                <Col flex="auto">
-                  <div
-                    style={{
-                      display: "flex",
-                      justifyContent: "center",
-                      alignItems: "center",
-                      flexWrap: "wrap",
-                      gap: "16px",
-                    }}
-                  >
-                    <div
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "12px",
-                        padding: "12px 20px",
-                        background: "rgba(64, 169, 255, 0.1)",
-                        borderRadius: "12px",
-                        border: "1px solid rgba(64, 169, 255, 0.2)",
-                        backdropFilter: "blur(10px)",
-                      }}
-                    >
-                      <div
-                        style={{
-                          background:
-                            "linear-gradient(135deg, #40a9ff, #1890ff)",
-                          borderRadius: "50%",
-                          padding: "8px",
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                        }}
-                      >
-                        <span
-                          style={{
-                            color: "#ffffff",
-                            fontSize: 16,
-                            fontWeight: "bold",
-                          }}
-                        >
-                          📊
-                        </span>
-                      </div>
-                      <Text
-                        strong
-                        style={{
-                          color: "#ffffff",
-                          fontSize: 16,
-                          fontWeight: 600,
-                          whiteSpace: "nowrap",
-                        }}
-                      >
-                        Filtre
-                      </Text>
-                      <Select
-                        value={selectedFilter}
-                        onChange={(value) => {
-                          console.log("🔄 Changement de filtre:", value);
-                          setSelectedFilter(value);
-                          // Le useEffect se chargera du rechargement automatique
-                        }}
-                        style={{
-                          width: 220,
-                          borderRadius: "8px",
-                        }}
-                        options={filterOptions}
-                        placeholder="Sélectionner..."
-                        size="middle"
-                      />
-                    </div>
-
-                    <div
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "12px",
-                        padding: "12px 20px",
-                        background: "rgba(64, 169, 255, 0.1)",
-                        borderRadius: "12px",
-                        border: "1px solid rgba(64, 169, 255, 0.2)",
-                        backdropFilter: "blur(10px)",
-                      }}
-                    >
-                      <div
-                        style={{
-                          background:
-                            "linear-gradient(135deg, #40a9ff, #1890ff)",
-                          borderRadius: "50%",
-                          padding: "8px",
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                        }}
-                      >
-                        <AimOutlined
-                          style={{ color: "#ffffff", fontSize: 16 }}
-                        />
-                      </div>
-                      <Text
-                        strong
-                        style={{
-                          color: "#ffffff",
-                          fontSize: 16,
-                          fontWeight: 600,
-                          whiteSpace: "nowrap",
-                        }}
-                      >
-                        Région
-                      </Text>
-                      <Select
-                        value={selectedRegion}
-                        onChange={handleRegionChange}
-                        style={{
-                          width: 220,
-                          borderRadius: "8px",
-                        }}
-                        options={REGIONS}
-                        placeholder="Sélectionner..."
-                        size="middle"
-                      />
-                    </div>
-
-                    <div
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "12px",
-                        padding: "12px 20px",
-                        background: "rgba(64, 169, 255, 0.1)",
-                        borderRadius: "12px",
-                        border: "1px solid rgba(64, 169, 255, 0.2)",
-                        backdropFilter: "blur(10px)",
-                      }}
-                    >
-                      <div
-                        style={{
-                          background:
-                            "linear-gradient(135deg, #40a9ff, #1890ff)",
-                          borderRadius: "50%",
-                          padding: "8px",
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                        }}
-                      >
-                        <span
-                          style={{
-                            color: "#ffffff",
-                            fontSize: 16,
-                            fontWeight: "bold",
-                          }}
-                        >
-                          📅
-                        </span>
-                      </div>
-                      <Text
-                        strong
-                        style={{
-                          color: "#ffffff",
-                          fontSize: 16,
-                          fontWeight: 600,
-                          whiteSpace: "nowrap",
-                        }}
-                      >
-                        Année
-                      </Text>
-                      <Select
-                        value={selectedYear}
-                        onChange={(value) => {
-                          console.log("🔄 Changement d'année:", value);
-                          setSelectedYear(value);
-                          // Le useEffect se chargera du rechargement automatique
-                        }}
-                        style={{
-                          width: 220,
-                          borderRadius: "8px",
-                        }}
-                        options={availableYears}
-                        placeholder="Sélectionner..."
-                        size="middle"
-                      />
-                    </div>
-
-                    <div
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "12px",
-                        padding: "12px 20px",
-                        background: "rgba(64, 169, 255, 0.1)",
-                        borderRadius: "12px",
-                        border: "1px solid rgba(64, 169, 255, 0.2)",
-                        backdropFilter: "blur(10px)",
-                      }}
-                    >
-                      <div
-                        style={{
-                          background:
-                            "linear-gradient(135deg, #40a9ff, #1890ff)",
-                          borderRadius: "50%",
-                          padding: "8px",
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                        }}
-                      >
-                        <BgColorsOutlined
-                          style={{ color: "#ffffff", fontSize: 16 }}
-                        />
-                      </div>
-                      <Text
-                        strong
-                        style={{
-                          color: "#ffffff",
-                          fontSize: 16,
-                          fontWeight: 600,
-                          whiteSpace: "nowrap",
-                        }}
-                      >
-                        Couleurs
-                      </Text>
-                      <Switch
-                        checked={colorMode}
-                        onChange={setColorMode}
-                        checkedChildren="ON"
-                        unCheckedChildren="OFF"
-                        style={{
-                          backgroundColor: colorMode ? "#40a9ff" : "#434343",
-                        }}
-                      />
-                    </div>
-                  </div>
-                </Col>
-              </Row>
-            </Card>
-
             <Layout
               style={{
                 flex: 1,
@@ -786,32 +541,6 @@ export default function ContentMap() {
                   vaccinationData={allVaccinationData}
                   selectedFilter={selectedFilter}
                 />
-
-                {/* Debug info */}
-                {import.meta.env.DEV && (
-                  <div
-                    style={{
-                      position: "absolute",
-                      bottom: "10px",
-                      left: "10px",
-                      background: "rgba(0,0,0,0.8)",
-                      color: "white",
-                      padding: "10px",
-                      borderRadius: "5px",
-                      fontSize: "12px",
-                      zIndex: 1000,
-                    }}
-                  >
-                    <div>Filtre: {selectedFilter}</div>
-                    <div>
-                      Données vaccination:{" "}
-                      {Object.keys(allVaccinationData).length} départements
-                    </div>
-                    <div>
-                      Départements: {Object.keys(allVaccinationData).join(", ")}
-                    </div>
-                  </div>
-                )}
 
                 {/* Panneau d'information du département sélectionné */}
                 {selectedDepartment && (
@@ -955,28 +684,6 @@ export default function ContentMap() {
                               }}
                             >
                               {departmentData.taux}%
-                            </div>
-                          </div>
-
-                          <div style={{ marginBottom: "8px" }}>
-                            <Text
-                              style={{
-                                color: "rgba(255, 255, 255, 0.7)",
-                                fontSize: 12,
-                                fontWeight: 500,
-                              }}
-                            >
-                              Nombre de doses administrées
-                            </Text>
-                            <div
-                              style={{
-                                color: "#ffffff",
-                                fontSize: 16,
-                                fontWeight: 600,
-                                marginTop: "4px",
-                              }}
-                            >
-                              {departmentData.doses.toLocaleString()} doses
                             </div>
                           </div>
 
