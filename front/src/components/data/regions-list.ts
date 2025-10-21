@@ -1,5 +1,5 @@
 export const REGIONS = [
-  { value: "all", label: "France entière" },
+  { value: "all", label: "France" },
   { value: "84", label: "Auvergne-Rhône-Alpes" },
   { value: "27", label: "Bourgogne-Franche-Comté" },
   { value: "53", label: "Bretagne" },

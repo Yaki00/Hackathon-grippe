@@ -15,7 +15,7 @@ import {
   AimOutlined,
 } from "@ant-design/icons";
 import MapTest from "./Maps";
-import { REGIONS } from "../data/regions-list";
+import { REGIONS, DEPARTEMENTS } from "../data/regions-list";
 
 const { Text, Title } = Typography;
 const { Header, Content, Sider } = Layout;
@@ -24,6 +24,10 @@ export default function ContentMap() {
   const [selectedRegion, setSelectedRegion] = useState<string>("all");
   const [selectedYear, setSelectedYear] = useState<string>("2024");
   const [colorMode, setColorMode] = useState<boolean>(false);
+  const [selectedDepartment, setSelectedDepartment] = useState<{
+    code: string;
+    name: string;
+  } | null>(null);
 
   // Liste des années disponibles
   const availableYears = [
@@ -42,6 +46,31 @@ export default function ContentMap() {
   // Quand on change de région, garder l'année sélectionnée
   const handleRegionChange = (value: string) => {
     setSelectedRegion(value);
+    // Réinitialiser la sélection du département quand on change de région
+    setSelectedDepartment(null);
+  };
+
+  // Fonction pour trouver la région d'un département
+  const findRegionByDepartment = (departmentCode: string): string | null => {
+    const department = DEPARTEMENTS.find((dep) => dep.value === departmentCode);
+    return department ? department.region : null;
+  };
+
+  // Gestionnaire pour la sélection d'un département
+  const handleDepartmentSelect = (
+    departmentCode: string,
+    departmentName: string
+  ) => {
+    setSelectedDepartment({
+      code: departmentCode,
+      name: departmentName,
+    });
+
+    // Trouver et sélectionner la région correspondante
+    const regionCode = findRegionByDepartment(departmentCode);
+    if (regionCode) {
+      setSelectedRegion(regionCode);
+    }
   };
 
   return (
@@ -346,7 +375,103 @@ export default function ContentMap() {
                 selectedRegion={selectedRegion}
                 selectedYear={selectedYear}
                 colorMode={colorMode}
+                onDepartmentSelect={handleDepartmentSelect}
               />
+
+              {/* Panneau d'information du département sélectionné */}
+              {selectedDepartment && (
+                <div
+                  style={{
+                    position: "absolute",
+                    top: "20px",
+                    right: "20px",
+                    background: "rgba(31, 41, 55, 0.95)",
+                    backdropFilter: "blur(10px)",
+                    borderRadius: "12px",
+                    padding: "20px",
+                    border: "1px solid rgba(255, 255, 255, 0.1)",
+                    boxShadow: "0 8px 32px rgba(0, 0, 0, 0.3)",
+                    minWidth: "250px",
+                    zIndex: 1000,
+                  }}
+                >
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "12px",
+                      marginBottom: "12px",
+                    }}
+                  >
+                    <div
+                      style={{
+                        background: "linear-gradient(135deg, #40a9ff, #1890ff)",
+                        borderRadius: "50%",
+                        padding: "8px",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                      }}
+                    >
+                      <EnvironmentOutlined
+                        style={{ color: "#ffffff", fontSize: 16 }}
+                      />
+                    </div>
+                    <div
+                      style={{
+                        color: "#ffffff",
+                        fontSize: 16,
+                        fontWeight: 600,
+                        marginTop: "4px",
+                      }}
+                    >
+                      {selectedDepartment.name}
+                    </div>
+                    <div
+                      style={{
+                        color: "#ffffff",
+                        fontSize: 18,
+                        fontWeight: 600,
+                        marginTop: "4px",
+                      }}
+                    >
+                      {(() => {
+                        const regionCode = findRegionByDepartment(
+                          selectedDepartment.code
+                        );
+                        const region = REGIONS.find(
+                          (r) => r.value === regionCode
+                        );
+                        return region ? region.label : "Région non trouvée";
+                      })()}
+                    </div>
+                  </div>
+
+                  <div style={{ marginBottom: "8px" }}></div>
+
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "8px",
+                      padding: "8px 12px",
+                      background: "rgba(64, 169, 255, 0.1)",
+                      borderRadius: "8px",
+                      border: "1px solid rgba(64, 169, 255, 0.2)",
+                    }}
+                  >
+                    <Text
+                      style={{
+                        color: "rgba(255, 255, 255, 0.8)",
+                        fontSize: 12,
+                        fontStyle: "italic",
+                      }}
+                    >
+                      Cliquez sur un autre département pour changer la sélection
+                    </Text>
+                  </div>
+                </div>
+              )}
             </Content>
 
             <Sider

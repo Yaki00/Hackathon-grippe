@@ -78,12 +78,20 @@ function buildCountryMask(country: Feature | FeatureCollection): Feature {
   } as Feature;
 }
 
+// Limites géographiques de la France métropolitaine
+const FRANCE_BOUNDS = {
+  minLng: -5.5, // Ouest (Bretagne)
+  maxLng: 10.0, // Est (Alsace)
+  minLat: 41.0, // Sud (Corse)
+  maxLat: 51.5, // Nord (Nord-Pas-de-Calais)
+};
+
 const INITIAL_VIEW_STATE = {
   longitude: 2.3522,
   latitude: 48.8566,
   zoom: 10,
-  minZoom: 2,
-  maxZoom: 10,
+  minZoom: 4.5,
+  maxZoom: 7.5,
   pitch: 10,
   maxPitch: 60,
   bearing: 0,
@@ -91,6 +99,23 @@ const INITIAL_VIEW_STATE = {
 
 // Durée de transition pour les animations de zoom/dézoom (en millisecondes)
 const TRANSITION_DURATION = 1500;
+
+// Fonction pour contraindre les coordonnées dans les limites de la France
+function constrainToFranceBounds(
+  longitude: number,
+  latitude: number
+): { longitude: number; latitude: number } {
+  return {
+    longitude: Math.max(
+      FRANCE_BOUNDS.minLng,
+      Math.min(FRANCE_BOUNDS.maxLng, longitude)
+    ),
+    latitude: Math.max(
+      FRANCE_BOUNDS.minLat,
+      Math.min(FRANCE_BOUNDS.maxLat, latitude)
+    ),
+  };
+}
 
 const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_TOKEN as string;
 
@@ -107,6 +132,7 @@ type MapTestProps = {
   colorMode?: boolean;
   pitch?: number;
   bearing?: number;
+  onDepartmentSelect?: (departmentCode: string, departmentName: string) => void;
 };
 
 // Fonction pour extraire une région ou un département spécifique
@@ -203,6 +229,7 @@ export default function MapTest({
   colorMode = false,
   pitch,
   bearing,
+  onDepartmentSelect,
 }: MapTestProps = {}) {
   // TODO: Utiliser selectedYear pour charger les données spécifiques à l'année
   console.log("Année sélectionnée:", selectedYear);
@@ -214,6 +241,11 @@ export default function MapTest({
     pitch: pitch ?? INITIAL_VIEW_STATE.pitch,
     bearing: bearing ?? INITIAL_VIEW_STATE.bearing,
   }));
+
+  // État pour le département sélectionné
+  const [selectedDepartment, setSelectedDepartment] = useState<string | null>(
+    null
+  );
 
   const data: Point[] = useMemo(
     () => [
@@ -257,14 +289,23 @@ export default function MapTest({
   // Mettre à jour la vue avec transition fluide quand les props ou la zone changent
   useEffect(() => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    setViewState((prev: any) => ({
-      ...prev,
-      ...dynamicViewState,
-      pitch: pitch ?? prev.pitch,
-      bearing: bearing ?? prev.bearing,
-      // Ajouter la durée de transition pour les animations fluides
-      transitionDuration: TRANSITION_DURATION,
-    }));
+    setViewState((prev: any) => {
+      const constrainedCoords = constrainToFranceBounds(
+        dynamicViewState.longitude,
+        dynamicViewState.latitude
+      );
+
+      return {
+        ...prev,
+        ...dynamicViewState,
+        longitude: constrainedCoords.longitude,
+        latitude: constrainedCoords.latitude,
+        pitch: pitch ?? prev.pitch,
+        bearing: bearing ?? prev.bearing,
+        // Ajouter la durée de transition pour les animations fluides
+        transitionDuration: TRANSITION_DURATION,
+      };
+    });
   }, [dynamicViewState, pitch, bearing]);
 
   // Masque opaque pour cacher tout sauf la zone sélectionnée
@@ -341,34 +382,69 @@ export default function MapTest({
     [colorMode]
   );
 
-  // Couche pour les frontières des départements (visible seulement au zoom 2+)
-  const departementsBorderLayer = useMemo(
+  // Couche pour les départements (cliquable et avec remplissage)
+  const departementsLayer = useMemo(
     () =>
       new GeoJsonLayer({
-        id: "departements-border",
+        id: "departements",
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         data: departementsData as any,
         stroked: true,
-        filled: false,
+        filled: true,
+        getFillColor: (feature: any) => {
+          const departmentCode =
+            feature.properties?.code || feature.properties?.INSEE_DEP;
+          if (selectedDepartment === departmentCode) {
+            return colorMode ? [255, 100, 100, 200] : [100, 200, 255, 200]; // Couleur de sélection
+          }
+          return colorMode ? [255, 200, 100, 50] : [120, 120, 120, 30]; // Couleur normale
+        },
         getLineColor: colorMode
           ? [255, 200, 100, 150] // orange clair en mode couleur
           : [120, 120, 120, 150], // gris foncé en mode normal
-        getLineWidth: 1,
+        getLineWidth: (feature: any) => {
+          const departmentCode =
+            feature.properties?.code || feature.properties?.INSEE_DEP;
+          return selectedDepartment === departmentCode ? 3 : 1;
+        },
         lineWidthMinPixels: 0.5,
-        lineWidthMaxPixels: 2,
-        pickable: false,
+        lineWidthMaxPixels: 3,
+        pickable: true,
         visible: viewState.zoom >= 2, // Visible seulement au zoom 2 ou plus
+        onClick: (info: any) => {
+          if (info.object && info.object.properties) {
+            const departmentCode =
+              info.object.properties.code || info.object.properties.INSEE_DEP;
+            const departmentName =
+              info.object.properties.nom || info.object.properties.NOM_DEP;
+
+            if (departmentCode && departmentName) {
+              setSelectedDepartment(departmentCode);
+              onDepartmentSelect?.(departmentCode, departmentName);
+            }
+          }
+        },
       }),
-    [colorMode, viewState.zoom]
+    [colorMode, viewState.zoom, selectedDepartment, onDepartmentSelect]
   );
 
   return (
     <DeckGL
       views={[new MapView({ id: "map", controller: true })]}
       viewState={{ ...viewState, maxPitch: 80 }}
-      onViewStateChange={({ viewState: newViewState }) =>
-        setViewState(newViewState)
-      }
+      onViewStateChange={({ viewState: newViewState }) => {
+        // Appliquer les contraintes géographiques lors du déplacement
+        const constrainedCoords = constrainToFranceBounds(
+          newViewState.longitude,
+          newViewState.latitude
+        );
+
+        setViewState({
+          ...newViewState,
+          longitude: constrainedCoords.longitude,
+          latitude: constrainedCoords.latitude,
+        });
+      }}
       controller={{
         dragRotate: true,
       }}
@@ -376,7 +452,7 @@ export default function MapTest({
         maskLayer,
         zoneLayer,
         regionsBorderLayer,
-        departementsBorderLayer,
+        departementsLayer,
         ...points,
       ]}
       style={{ width: "100%", height: "100%" }}
