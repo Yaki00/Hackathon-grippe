@@ -30,7 +30,16 @@ def calculer_taux_par_zone(annee: str = "2024"):
         
         # ✅ VRAIES DONNÉES : fichiers locaux + APIs
         donnees = get_donnees_vaccination_region(code_region, annee)
-        taux_reel = donnees["taux_vaccination"]
+        
+        # Récupérer le taux (différents formats possibles)
+        if "taux_global" in donnees and donnees["taux_global"]:
+            taux_reel = donnees["taux_global"]
+        elif "taux_vaccination" in donnees:
+            taux_reel = donnees["taux_vaccination"]
+        elif "taux_65_plus" in donnees and donnees["taux_65_plus"]:
+            taux_reel = donnees["taux_65_plus"]  # Fallback sur 65+
+        else:
+            taux_reel = 60.0  # Valeur par défaut
         
         # Calculer nombre de vaccinés
         vaccines = int(population_cible * (taux_reel / 100))

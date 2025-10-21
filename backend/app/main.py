@@ -10,12 +10,8 @@ from app.vaccination import (
     get_details_zone,
     get_statistiques_nationales
 )
-from app.analyse_intelligente import (
-    identifier_zones_sous_vaccinees,
-    predire_besoins_vaccins,
-    optimiser_distribution_zones,
-    anticiper_passages_urgences
-)
+# TODO: Ajouter analyse intelligente plus tard
+# from app.analyse_intelligente import ...
 
 # Application FastAPI
 app = FastAPI(
