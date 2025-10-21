@@ -13,3 +13,17 @@ export interface VaccinationByZone {
 		[key: string]: number;
 	};
 }
+
+
+export interface VaccinationStockByZone {
+	zone: string;
+	zone_code: string;
+	current_inventory: number;
+	forecasted_need_30_days: number;
+	surplus_deficit: number;
+	statut: string;
+	couleur: string;
+	taux_couverture: number;
+	autonomie_jours: number;
+	recommandation: string;
+}

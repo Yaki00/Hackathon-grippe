@@ -4,79 +4,9 @@ import { Card } from '../components/Card';
 import { Table } from 'antd';
 import { useEffect, useState } from 'react';
 import { zoneApi } from '../api/zoneApi';
-import type { VaccinationByZone } from '../entities/VaccinationByZone';
-
-
-const ContainerMain = styled.div`
-  display: flex;
-  flex-direction: column;
-  height: 100vh;
-  margin: 50px auto;
-  max-width: 1200px;
-  width: 100%;
-  box-sizing: border-box;
-`;
-
-const Header = styled.div`
-position: sticky;
-top: 0px;
-width: 100%;
-background-color: #121c21;
-box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-z-index: 1000;
-	  padding: 20px 40px;
-	  h1{
-		  margin: 0;
-		  font-size: 14px;
-	  }
-`
-
-const TitlePage = styled.h2`
-	margin: 0;
-	font-size: 40px;
-`;
-
-const ContainerHeader = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  p{
-	max-width: 500px;
-	color: #95a0b3;
-  }
-`;
-
-const Content = styled.div`
-	display: flex;
-	flex-direction: column;
-	gap: 40px;
-	width: 100%;
-	margin-top: 40px;
-`
-
-const dataSource = [
-  {
-	key: '1',
-	zone: 'Zone A',
-	currentInventory: 500,
-	forecastedNeed: 800,
-	surplusDeficit: -300,
-  },
-  {
-	key: '2',
-	zone: 'Zone B',
-	currentInventory: 700,
-	forecastedNeed: 600,
-	surplusDeficit: 100,
-  },
-  {
-	key: '3',
-	zone: 'Zone C',
-	currentInventory: 400,
-	forecastedNeed: 900,
-	surplusDeficit: -500,
-  },
-];
+import type { VaccinationByZone, VaccinationStockByZone } from '../entities/VaccinationByZone';
+				import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from "recharts";
+import { aggregateByZoneAndYear, groupByZone } from '../utils';
 
 const columns = [
   {
@@ -86,20 +16,20 @@ const columns = [
   },
   {
     title: 'Current Inventory',
-    dataIndex: 'currentInventory',
-    key: 'currentInventory',
+    dataIndex: 'current_inventory',
+    key: 'current_inventory',
 	render: (text: number) => <span style={{ color: '#95a0b3' }}>{text}</span>,
   },
   {
     title: 'Forecasted Need',
-    dataIndex: 'forecastedNeed',
-    key: 'forecastedNeed',
+    dataIndex: 'forecasted_need_30_days',
+    key: 'forecasted_need_30_days',
 	render: (text: number) => <span style={{ color: '#95a0b3' }}>{text}</span>,
   },
   {
 	title: 'Surplus/Deficit',
-	dataIndex: 'surplusDeficit',
-	key: 'surplusDeficit',
+	dataIndex: 'surplus_deficit',
+	key: 'surplus_deficit',
 	render: (text: number) => (
 		<span style={{ color: text < 0 ? 'red' : 'green' }}>
 			{text < 0 ? '-' : '+'}{Math.abs(text)}
@@ -107,7 +37,6 @@ const columns = [
 	),
   }
 ];
-
 
 
 const TableStyle = styled(Table)`
@@ -144,54 +73,42 @@ const TableStyle = styled(Table)`
 	}
 `;
 
-const UlStyle = styled.ul`
-	list-style: none;
-	display: flex;
-	gap: 20px;
-	li{
-		padding: 10px 20px;
-		border-bottom: 1px solid #768191;
-		width: fit-content;
-		cursor: pointer;
-		&:hover{
-			border-bottom-color: #2a5266;
-		}
-	}
-`
 
 export const Dashboard = () => {
 	const [data, setData] = useState<VaccinationByZone[]>([]);
+	const [dataStock, setDataStock] = useState<VaccinationStockByZone[]>([]);
+	const [dataHpvByZone, setDataHpvByZone] = useState<any>([]);
+	const [loadingStock, setLoadingStock] = useState<boolean>(true);
 	const [loading, setLoading] = useState<boolean>(true);
+	const [loadingHpv, setLoadingHpv] = useState<boolean>(true);
 	
 
 	useEffect(() => {
 
-		const fetchData = async () => {
+		const fetchDataVaccination = async () => {
 			const result = await zoneApi.getVaccinationByZone();
 			console.log(result.zones);
 			setData(result.zones);
 			setLoading(false);
 		}
-		fetchData();
-	}, [])
-	if (loading) return <div>Loading...</div>;
+		const fetchDataStock = async () => {
+			const result = await zoneApi.getVaccinationStockByZone();
+			console.log(result);
+			setDataStock(result.data.zones);
+			setLoadingStock(false);
+		}
+		const fetchHpvByRegion = async () => {
+			const result = await zoneApi.getVaccinationHpvByRegion();
+			setDataHpvByZone(aggregateByZoneAndYear(result.data));
+			setLoadingHpv(false);
+		}
+		fetchDataVaccination();
+		fetchDataStock();
+		fetchHpvByRegion();
+	}, []) 
+	if (loading || loadingStock || loadingHpv) return <div>Loading...</div>;
   return (
 	<>
-	<Header>
-		<h1>Vision santé</h1>
-	</Header>
-	<ContainerMain>
-		<ContainerHeader>
-			<TitlePage>Dashboard sur la vaccination</TitlePage>
-			<p>Suivre, visualiser et prévoir les données relatives à la vaccination contre la grippe dans toute la France.</p>
-			<div>
-				<UlStyle>
-					<li>Général</li>
-					<li>Vue géographique</li>
-				</UlStyle>
-			</div>
-		</ContainerHeader>
-		<Content>
 			<DisplayData title="Under-Vaccinated Zones" content="Highlighting areas with low vaccination rates" type="card">
 				{data.map((zone) => (
 					<Card 
@@ -205,10 +122,27 @@ export const Dashboard = () => {
 				))}
 			</DisplayData>
 			<DisplayData title="Vaccine need prediction" content="Forcasted requirements based on current data" type="table">
-				<TableStyle dataSource={dataSource} columns={columns} pagination={false} />
+				<TableStyle dataSource={dataStock} columns={columns} pagination={false} />
 			</DisplayData>
-		</Content>
-	</ContainerMain>
+			<DisplayData title="Vaccine Stock vs Need" content="Comparing current inventory with forecasted needs" type="card">
+
+
+    <BarChart width={800} height={400} data={dataHpvByZone}>
+      <CartesianGrid strokeDasharray="3 3" />
+      <XAxis dataKey="annee" />
+      <YAxis />
+      <Tooltip />
+      <Legend />
+
+      <Bar dataKey="zoneA_dose1_filles" fill="#8884d8" />
+      <Bar dataKey="zoneB_dose1_filles" fill="#82ca9d" />
+      <Bar dataKey="zoneC_dose1_filles" fill="#ffc658" />
+	  <Bar dataKey="zoneA_dose1_garcons" fill="#aa84d8" />
+	  <Bar dataKey="zoneB_dose1_garcons" fill="#55ca9d" />
+	  <Bar dataKey="zoneC_dose1_garcons" fill="#ff6658" />
+      {/* tu peux ajouter d'autres Bar pour garçons et dose 2 si besoin */}
+    </BarChart>
+			</DisplayData>
 	</>
   );
 };
