@@ -5,9 +5,8 @@ import { Table } from 'antd';
 import { useEffect, useState } from 'react';
 import { zoneApi } from '../api/zoneApi';
 import type { VaccinationByZone, VaccinationStockByZone } from '../entities/VaccinationByZone';
-				import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from "recharts";
-import { aggregateByZoneAndYear, groupByZone } from '../utils';
-
+import { aggregateByZoneAndYear } from '../utils';
+import { CustomLineChart } from '../components/CustomLineChart';
 const columns = [
   {
     title: 'Zone',
@@ -107,6 +106,11 @@ export const Dashboard = () => {
 		fetchHpvByRegion();
 	}, []) 
 	if (loading || loadingStock || loadingHpv) return <div>Loading...</div>;
+
+
+	
+
+
   return (
 	<>
 			<DisplayData title="Under-Vaccinated Zones" content="Highlighting areas with low vaccination rates" type="card">
@@ -125,23 +129,7 @@ export const Dashboard = () => {
 				<TableStyle dataSource={dataStock} columns={columns} pagination={false} />
 			</DisplayData>
 			<DisplayData title="Vaccine Stock vs Need" content="Comparing current inventory with forecasted needs" type="card">
-
-
-    <BarChart width={800} height={400} data={dataHpvByZone}>
-      <CartesianGrid strokeDasharray="3 3" />
-      <XAxis dataKey="annee" />
-      <YAxis />
-      <Tooltip />
-      <Legend />
-
-      <Bar dataKey="zoneA_dose1_filles" fill="#8884d8" />
-      <Bar dataKey="zoneB_dose1_filles" fill="#82ca9d" />
-      <Bar dataKey="zoneC_dose1_filles" fill="#ffc658" />
-	  <Bar dataKey="zoneA_dose1_garcons" fill="#aa84d8" />
-	  <Bar dataKey="zoneB_dose1_garcons" fill="#55ca9d" />
-	  <Bar dataKey="zoneC_dose1_garcons" fill="#ff6658" />
-      {/* tu peux ajouter d'autres Bar pour garçons et dose 2 si besoin */}
-    </BarChart>
+				<CustomLineChart dataHpvByZone={dataHpvByZone} />
 			</DisplayData>
 	</>
   );
