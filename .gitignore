@@ -50,3 +50,4 @@ Thumbs.db
 *.temp
 t.txt
 
+backend/data/datagouve/medecin/medecins.csv
