@@ -8,11 +8,15 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.vaccination import (
     calculer_taux_par_zone,
     get_details_zone,
-    get_statistiques_nationales
+    get_statistiques_nationales,
+    calculer_taux_par_departement,
+    get_details_departement,
+    get_statistiques_par_zone_et_departement
 )
 from app.prediction import (
     predire_besoins_prochains_mois,
-    get_stock_actuel_simule
+    get_stock_actuel_simule,
+    get_stock_vs_besoin_par_zone
 )
 from app.couverture_vaccins import (
     # HPV
@@ -56,12 +60,16 @@ def root():
             "vaccination_zones": {
                 "zones": "/vaccination/zones",
                 "zone_details": "/vaccination/zone/{zone_code}",
-                "national": "/vaccination/national"
+                "national": "/vaccination/national",
+                "departements": "/vaccination/departements",
+                "departement_details": "/vaccination/departement/{code_dept}",
+                "zones_avec_departements": "/vaccination/zones-departements"
             },
             "prediction": {
                 "doses_nationales": "/prediction/doses",
                 "doses_par_zone": "/prediction/doses/zone/{zone_code}",
-                "stock_actuel": "/prediction/stock"
+                "stock_actuel": "/prediction/stock",
+                "stock_vs_besoin": "/prediction/stock-vs-besoin"
             },
             "hpv": {
                 "national": "/couverture/hpv/national",
@@ -168,6 +176,104 @@ def get_vaccination_national(annee: str = "2024"):
         }
 
 
+@app.get("/vaccination/departements")
+def get_vaccination_departements(annee: str = "2024", zone: str = None):
+    """
+    **📍 Taux de vaccination par département**
+    
+    Retourne pour chaque département :
+    - Code et nom du département
+    - Région et zone associées
+    - Population totale et cible
+    - Nombre de personnes vaccinées
+    - Taux de vaccination (%)
+    - Objectif et si atteint
+    
+    **Paramètres** :
+    - `annee` : Année de référence (défaut: 2024)
+    - `zone` : Filtre par zone (A, B ou C) ou None pour tous
+    """
+    try:
+        if zone:
+            zone = zone.upper()
+            if zone not in ["A", "B", "C"]:
+                return {
+                    "success": False,
+                    "error": "zone doit être A, B ou C"
+                }
+        
+        departements = calculer_taux_par_departement(annee, zone_filter=zone)
+        
+        return {
+            "success": True,
+            "annee": annee,
+            "zone_filtre": zone,
+            "nb_departements": len(departements),
+            "departements": departements
+        }
+    except Exception as e:
+        return {
+            "success": False,
+            "error": str(e)
+        }
+
+
+@app.get("/vaccination/departement/{code_dept}")
+def get_vaccination_departement(code_dept: str, annee: str = "2024"):
+    """
+    **📍 Détails d'un département spécifique**
+    
+    **Paramètres** :
+    - `code_dept` : Code département (ex: "75" pour Paris)
+    - `annee` : Année de référence
+    """
+    try:
+        dept = get_details_departement(code_dept, annee)
+        
+        if not dept:
+            return {
+                "success": False,
+                "error": f"Département {code_dept} non trouvé"
+            }
+        
+        return {
+            "success": True,
+            "annee": annee,
+            "departement": dept
+        }
+    except Exception as e:
+        return {
+            "success": False,
+            "error": str(e)
+        }
+
+
+@app.get("/vaccination/zones-departements")
+def get_vaccination_zones_avec_departements(annee: str = "2024"):
+    """
+    **📊 Statistiques par zone avec détails des départements**
+    
+    Vue agrégée par zone (A, B, C) avec liste des départements
+    et leurs taux de vaccination respectifs
+    
+    **Paramètres** :
+    - `annee` : Année de référence (défaut: 2024)
+    """
+    try:
+        stats = get_statistiques_par_zone_et_departement(annee)
+        
+        return {
+            "success": True,
+            "annee": annee,
+            "zones": stats
+        }
+    except Exception as e:
+        return {
+            "success": False,
+            "error": str(e)
+        }
+
+
 # ============================================
 # PARTIE 2 : PRÉDICTION DES BESOINS EN DOSES
 # ============================================
@@ -252,9 +358,18 @@ def get_prediction_doses_zone(zone_code: str, horizon_mois: int = 1):
 @app.get("/prediction/stock")
 def get_stock_actuel(zone_code: str = None):
     """
-    **📦 Stock actuel de doses disponibles**
+    **📦 Estimation du stock de doses disponibles**
     
-    Retourne le stock actuel simulé (pour démo)
+    Calcule une estimation du stock basée sur les données historiques :
+    - Stock disponible en entrepôt
+    - Réserve stratégique (15%)
+    - Doses distribuées dans les centres (25%)
+    - Doses en transit (5%)
+    - Niveau d'alerte et recommandations
+    - Autonomie en jours
+    
+    **Note** : Les valeurs sont estimées à partir des données de distribution.
+    En production, cette route serait connectée à l'API de gestion de stock réelle.
     
     **Paramètres** :
     - `zone_code` : Code zone (A, B, C) ou None pour national
@@ -273,6 +388,37 @@ def get_stock_actuel(zone_code: str = None):
         return {
             "success": True,
             "data": stock
+        }
+    except Exception as e:
+        return {
+            "success": False,
+            "error": str(e)
+        }
+
+
+@app.get("/prediction/stock-vs-besoin")
+def get_stock_vs_besoin():
+    """
+    **📊 Comparaison Stock vs Besoin par Zone**
+    
+    Tableau de bord comparant pour chaque zone (A, B, C) :
+    - **Current Inventory** : Stock actuel disponible
+    - **Forecasted Need (Next 30 Days)** : Besoin prévu sur 30 jours
+    - **Surplus/Deficit** : Différence (positif = excédent, négatif = déficit)
+    - Taux de couverture et autonomie en jours
+    - Recommandations et alertes
+    
+    **Retourne** :
+    - Données par zone
+    - Total national
+    - Alertes et recommandations
+    """
+    try:
+        data = get_stock_vs_besoin_par_zone()
+        
+        return {
+            "success": True,
+            "data": data
         }
     except Exception as e:
         return {
