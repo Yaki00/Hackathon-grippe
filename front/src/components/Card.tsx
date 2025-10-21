@@ -27,9 +27,10 @@ const CardContent = styled.div`
 
 interface CardProps {
   title: string;
-  rate: string;
+  rate: number;
   content: string;
-  data: number;
+  vaccinatedRate: number;
+  objectif: number;
 }
 
 const Rate = styled.span`
@@ -48,29 +49,10 @@ const PieWrapper = styled.div`
   height: 200px;
 `;
 
-const ChartContainer = styled.div`
-  width: 100%;
-  height: 200px;
-`;
-const CircleChart = styled.div<{ rate: number }>`
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  width: 100px;
-  height: 100px;
-  border-radius: 50%;
-  background-color: #1c374a;
-  color: white;
-  font-size: 18px;
-  font-weight: bold;
-`;
-
-
-export const Card = ({ title, rate, content, data }: CardProps) => {
-
+export const Card = ({ title, rate, content, vaccinatedRate, objectif }: CardProps) => {
 	const formatData = [
-		{ name: 'Vaccinated', value: data },
-		{ name: 'Unvaccinated', value: 100 - data },
+		{ name: 'Vaccinated', value: vaccinatedRate },
+		{ name: 'Unvaccinated', value: objectif - vaccinatedRate },
 	];
 
   return (
@@ -93,7 +75,7 @@ export const Card = ({ title, rate, content, data }: CardProps) => {
 						paddingAngle={0}
 					>
 						{formatData.map((item, index) => (
-							<Cell key={`cell-${index}`} fill={COLORS[index]} cornerRadius={0} />
+							<Cell key={`cell-${index}`} fill={COLORS[index]} />
 						))}
 					</Pie>
 				</PieChart>

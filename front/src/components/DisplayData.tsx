@@ -1,14 +1,10 @@
 import styled from 'styled-components';
 import { Card } from './Card';
+import type { VaccinationByZone } from '../entities/VaccinationByZone';
 
-interface TestProps {
+interface DisplayDataProps {
 	title: string;
 	content: string;
-	data: {
-		zoneA: number;
-		zoneB: number;
-		zoneC: number;
-	},
 	type: string;
 	children: React.ReactNode;
 }
@@ -35,7 +31,7 @@ grid-template-columns: ${props => props.type === 'table' ? 'none' : 'repeat(3, 1
 gap: ${props => props.type === 'table' ? '0' : '20px'};
 `;
 
-export const DisplayData = ({ title, content, data, type,children }: TestProps) => {
+export const DisplayData = ({ title, content, type, children }: DisplayDataProps) => {
 
 	
 	return (
@@ -44,9 +40,6 @@ export const DisplayData = ({ title, content, data, type,children }: TestProps) 
 			<Subtitle>{content}</Subtitle>
 			<Content type={type}>
 				{children}
-				{/* <Card title="Zone A" rate="55" content="vaccination rate" data={data.zoneA} />
-				<Card title="Zone B" rate="70" content="vaccination rate" data={data.zoneB} />
-				<Card title="Zone C" rate="85" content="vaccination rate" data={data.zoneC} /> */}
 			</Content>
 		</Container>
 	);

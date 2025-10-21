@@ -2,9 +2,12 @@ import styled from 'styled-components';
 import { DisplayData } from '../components/DisplayData';
 import { Card } from '../components/Card';
 import { Table } from 'antd';
+import { useEffect, useState } from 'react';
+import { zoneApi } from '../api/zoneApi';
+import type { VaccinationByZone } from '../entities/VaccinationByZone';
 
 
-const Container = styled.div`
+const ContainerMain = styled.div`
   display: flex;
   flex-direction: column;
   height: 100vh;
@@ -15,19 +18,40 @@ const Container = styled.div`
 `;
 
 const Header = styled.div`
-	  margin: 0 0 50px 0;
+position: sticky;
+top: 0px;
+width: 100%;
+background-color: #121c21;
+box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+z-index: 1000;
+	  padding: 20px 40px;
+	  h1{
+		  margin: 0;
+		  font-size: 14px;
+	  }
 `
 
-const TitlePage = styled.h1`
+const TitlePage = styled.h2`
 	margin: 0;
+	font-size: 40px;
 `;
 
+const ContainerHeader = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  p{
+	max-width: 500px;
+	color: #95a0b3;
+  }
+`;
 
 const Content = styled.div`
 	display: flex;
 	flex-direction: column;
 	gap: 40px;
 	width: 100%;
+	margin-top: 40px;
 `
 
 const dataSource = [
@@ -122,28 +146,49 @@ const TableStyle = styled(Table)`
 
 
 export const Dashboard = () => {
-	const data = {
-		zoneA: 55,
-		zoneB: 70,
-		zoneC: 85,
-	}
-  return (
-	<Container>
-		<Header>
-			<TitlePage>Vaccine Distribution Dashboard</TitlePage>
-		</Header>
-		<Content>
-			<DisplayData title="Under-Vaccinated Zones" content="Highlighting areas with low vaccination rates" type="card" data={data}>
-				<Card title="Zone A" rate="55" content="vaccination rate" data={data.zoneA} />
-				<Card title="Zone B" rate="70" content="vaccination rate" data={data.zoneB} />
-				<Card title="Zone C" rate="85" content="vaccination rate" data={data.zoneC} />
-			</DisplayData>
-			<DisplayData title="Vaccine need prediction" content="Forcasted requirements based on current data" type="table" data={data}>
-				<TableStyle dataSource={dataSource} columns={columns} pagination={false} />
+	const [data, setData] = useState<VaccinationByZone[]>([]);
+	const [loading, setLoading] = useState<boolean>(true);
+	
 
+	useEffect(() => {
+
+		const fetchData = async () => {
+			const result = await zoneApi.getVaccinationByZone();
+			console.log(result.zones);
+			setData(result.zones);
+			setLoading(false);
+		}
+		fetchData();
+	}, [])
+	if (loading) return <div>Loading...</div>;
+  return (
+	<>
+	<Header>
+		<h1>Vision santé</h1>
+	</Header>
+	<ContainerMain>
+		<ContainerHeader>
+			<TitlePage>Dashboard sur la vaccination</TitlePage>
+			<p>Suivre, visualiser et prévoir les données relatives à la vaccination contre la grippe dans toute la France.</p>
+		</ContainerHeader>
+		<Content>
+			<DisplayData title="Under-Vaccinated Zones" content="Highlighting areas with low vaccination rates" type="card">
+				{data.map((zone) => (
+					<Card 
+						key={zone.zone_code}
+						title={zone.zone} 
+						rate={zone.taux_vaccination} 
+						content="vaccination rate" 
+						vaccinatedRate={zone.taux_vaccination} 
+						objectif={zone.objectif} 
+					/>
+				))}
+			</DisplayData>
+			<DisplayData title="Vaccine need prediction" content="Forcasted requirements based on current data" type="table">
+				<TableStyle dataSource={dataSource} columns={columns} pagination={false} />
 			</DisplayData>
 		</Content>
-	</Container>
-    
+	</ContainerMain>
+	</>
   );
 };
