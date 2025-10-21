@@ -1,12 +1,12 @@
 import "mapbox-gl/dist/mapbox-gl.css";
-import { useMemo } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { DeckGL } from "@deck.gl/react";
 import { ScatterplotLayer, GeoJsonLayer } from "@deck.gl/layers";
 import { Map } from "react-map-gl";
 import type { Feature, FeatureCollection } from "geojson";
 import france from "../data/france.json";
 import regionsData from "../data/regions.json";
-import departementsData from "../data/departements.json";
+import { MapView } from "@deck.gl/core";
 
 // Extrait la France métropolitaine + Corse (polygones en Europe)
 function getFranceMetropolitaine(
@@ -80,10 +80,10 @@ function buildCountryMask(country: Feature | FeatureCollection): Feature {
 const INITIAL_VIEW_STATE = {
   longitude: 2.3522,
   latitude: 48.8566,
-  zoom: 5,
-  minZoom: 3,
-  maxZoom: 15,
-  pitch: 15,
+  zoom: 3,
+  minZoom: 2,
+  maxZoom: 10,
+  pitch: 10,
   maxPitch: 60,
   bearing: 0,
 } as const;
@@ -99,8 +99,10 @@ type Point = {
 
 type MapTestProps = {
   selectedRegion?: string;
-  selectedDepartement?: string;
+  selectedYear?: string;
   colorMode?: boolean;
+  pitch?: number;
+  bearing?: number;
 };
 
 // Fonction pour extraire une région ou un département spécifique
@@ -167,9 +169,22 @@ function getViewStateForZone(zone: Feature | null): {
 
 export default function MapTest({
   selectedRegion,
-  selectedDepartement,
+  selectedYear, // TODO: Utiliser pour charger les données spécifiques à l'année
   colorMode = false,
+  pitch,
+  bearing,
 }: MapTestProps = {}) {
+  // TODO: Utiliser selectedYear pour charger les données spécifiques à l'année
+  console.log("Année sélectionnée:", selectedYear);
+
+  // État local pour la vue de la carte
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [viewState, setViewState] = useState<any>(() => ({
+    ...INITIAL_VIEW_STATE,
+    pitch: pitch ?? INITIAL_VIEW_STATE.pitch,
+    bearing: bearing ?? INITIAL_VIEW_STATE.bearing,
+  }));
+
   const data: Point[] = useMemo(
     () => [
       { position: [2.35, 48.86], size: 200, value: 10 },
@@ -195,34 +210,40 @@ export default function MapTest({
 
   // Déterminer quelle zone afficher
   const currentZone = useMemo(() => {
-    if (selectedDepartement) {
-      return extractZone(
-        departementsData as FeatureCollection,
-        selectedDepartement
-      );
-    } else if (selectedRegion && selectedRegion !== "all") {
+    if (selectedRegion && selectedRegion !== "all") {
       return extractZone(regionsData as FeatureCollection, selectedRegion);
     }
     return france as Feature; // France entière par défaut
-  }, [selectedRegion, selectedDepartement]);
+  }, [selectedRegion]);
 
-  // Calculer le viewState dynamique
+  // Calculer le viewState dynamique (position et zoom seulement)
   const dynamicViewState = useMemo(() => {
-    if (selectedDepartement || (selectedRegion && selectedRegion !== "all")) {
+    if (selectedRegion && selectedRegion !== "all") {
       return getViewStateForZone(currentZone);
     }
     return { longitude: 2.3522, latitude: 46.8566, zoom: 5 };
-  }, [selectedRegion, selectedDepartement, currentZone]);
+  }, [currentZone, selectedRegion]);
+
+  // Mettre à jour la vue quand les props ou la zone changent
+  useEffect(() => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    setViewState((prev: any) => ({
+      ...prev,
+      ...dynamicViewState,
+      pitch: pitch ?? prev.pitch,
+      bearing: bearing ?? prev.bearing,
+    }));
+  }, [dynamicViewState, pitch, bearing]);
 
   // Masque opaque pour cacher tout sauf la zone sélectionnée
   const maskFeature = useMemo(() => {
     if (!currentZone) return buildCountryMask(france as Feature);
-    if (selectedDepartement || (selectedRegion && selectedRegion !== "all")) {
-      // Pour une région ou un département, on crée un masque pour cette zone
+    if (selectedRegion && selectedRegion !== "all") {
+      // Pour une région, on crée un masque pour cette zone
       return buildCountryMask(currentZone);
     }
     return buildCountryMask(france as Feature);
-  }, [currentZone, selectedRegion, selectedDepartement]);
+  }, [currentZone, selectedRegion]);
 
   const maskLayer = useMemo(
     () =>
@@ -233,8 +254,8 @@ export default function MapTest({
         stroked: false,
         filled: true,
         getFillColor: colorMode
-          ? [0, 0, 0, 255] // noir totalement opaque en mode couleur
-          : [0, 0, 0, 255], // noir totalement opaque en mode normal
+          ? [18, 28, 33, 255] // #121c21 en mode couleur
+          : [18, 28, 33, 255], // #121c21 en mode normal
         pickable: false,
       }),
     [maskFeature, colorMode]
@@ -243,11 +264,11 @@ export default function MapTest({
   // Contour de la zone actuelle (France, région ou département)
   const zoneForBorder = useMemo(() => {
     if (!currentZone) return getFranceMetropolitaine(france as Feature);
-    if (selectedDepartement || (selectedRegion && selectedRegion !== "all")) {
+    if (selectedRegion && selectedRegion !== "all") {
       return currentZone;
     }
     return getFranceMetropolitaine(france as Feature);
-  }, [currentZone, selectedRegion, selectedDepartement]);
+  }, [currentZone, selectedRegion]);
 
   const zoneLayer = useMemo(
     () =>
@@ -269,8 +290,11 @@ export default function MapTest({
 
   return (
     <DeckGL
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      initialViewState={{ ...INITIAL_VIEW_STATE, ...dynamicViewState } as any}
+      views={[new MapView({ id: "map", controller: true })]}
+      viewState={{ ...viewState, maxPitch: 80 }}
+      onViewStateChange={({ viewState: newViewState }) =>
+        setViewState(newViewState)
+      }
       controller={{ dragRotate: true }}
       layers={[maskLayer, zoneLayer, ...points]}
       style={{ width: "100%", height: "100%" }}
@@ -282,6 +306,7 @@ export default function MapTest({
             ? "mapbox://styles/mapbox/streets-v12" // style coloré
             : "mapbox://styles/mapbox/dark-v11" // style sombre
         }
+        style={{ background: "#121c21" }}
         cooperativeGestures
       />
     </DeckGL>
