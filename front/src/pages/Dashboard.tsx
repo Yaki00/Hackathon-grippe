@@ -144,6 +144,20 @@ const TableStyle = styled(Table)`
 	}
 `;
 
+const UlStyle = styled.ul`
+	list-style: none;
+	display: flex;
+	gap: 20px;
+	li{
+		padding: 10px 20px;
+		border-bottom: 1px solid #768191;
+		width: fit-content;
+		cursor: pointer;
+		&:hover{
+			border-bottom-color: #2a5266;
+		}
+	}
+`
 
 export const Dashboard = () => {
 	const [data, setData] = useState<VaccinationByZone[]>([]);
@@ -170,6 +184,12 @@ export const Dashboard = () => {
 		<ContainerHeader>
 			<TitlePage>Dashboard sur la vaccination</TitlePage>
 			<p>Suivre, visualiser et prévoir les données relatives à la vaccination contre la grippe dans toute la France.</p>
+			<div>
+				<UlStyle>
+					<li>Général</li>
+					<li>Vue géographique</li>
+				</UlStyle>
+			</div>
 		</ContainerHeader>
 		<Content>
 			<DisplayData title="Under-Vaccinated Zones" content="Highlighting areas with low vaccination rates" type="card">
