@@ -247,6 +247,63 @@ def get_taux_couverture_reel_region(code_region, annee="2024"):
         return None
 
 
+def calculer_taux_reel_depuis_actes(annee="2024"):
+    """
+    Calcule le VRAI taux de vaccination de la population générale 
+    en utilisant les données ACTE (vaccinations réellement effectuées).
+    
+    IMPORTANT: Les taux grip_65plus et grip_moins65 concernent uniquement 
+    les POPULATIONS À RISQUE, pas la population générale.
+    
+    Returns:
+        dict avec taux_reel_65plus, taux_reel_moins65, taux_reel_global
+    """
+    try:
+        # Charger les données de doses-actes (vaccinations réelles)
+        df_doses = charger_fichier_local(annee, "doses-actes")
+        
+        if df_doses.empty:
+            return None
+        
+        # Total des vaccinations réelles (ACTE)
+        total_actes_65plus = df_doses[
+            (df_doses['variable'] == 'ACTE(VGP)') & 
+            (df_doses['groupe'] == '65 ans et plus')
+        ]['valeur'].sum()
+        
+        total_actes_moins65 = df_doses[
+            (df_doses['variable'] == 'ACTE(VGP)') & 
+            (df_doses['groupe'] == 'moins de 65 ans')
+        ]['valeur'].sum()
+        
+        # Population française estimée
+        POPULATION_FRANCE = 67_000_000
+        POPULATION_65_PLUS = int(POPULATION_FRANCE * 0.20)  # ~20% ont 65+
+        POPULATION_MOINS_65 = POPULATION_FRANCE - POPULATION_65_PLUS
+        
+        # Calculer les VRAIS taux (population générale, pas uniquement à risque)
+        taux_reel_65plus = (total_actes_65plus / POPULATION_65_PLUS) * 100
+        taux_reel_moins65 = (total_actes_moins65 / POPULATION_MOINS_65) * 100
+        taux_reel_global = ((total_actes_65plus + total_actes_moins65) / POPULATION_FRANCE) * 100
+        
+        return {
+            "taux_reel_65plus": round(taux_reel_65plus, 1),
+            "taux_reel_moins65": round(taux_reel_moins65, 1),
+            "taux_reel_global": round(taux_reel_global, 1),
+            "total_vaccinations_65plus": int(total_actes_65plus),
+            "total_vaccinations_moins65": int(total_actes_moins65),
+            "total_vaccinations": int(total_actes_65plus + total_actes_moins65),
+            "population_france": POPULATION_FRANCE,
+            "source": "ACTE (vaccinations réelles) - population générale",
+            "annee": annee,
+            "note": "Taux calculés sur la population TOTALE, pas uniquement populations à risque"
+        }
+        
+    except Exception as e:
+        print(f"⚠️  Erreur calcul taux réel depuis ACTE: {e}")
+        return None
+
+
 def get_donnees_vaccination_region(code_region, annee="2024"):
     """
     Récupère les données de vaccination d'une région.
@@ -255,13 +312,30 @@ def get_donnees_vaccination_region(code_region, annee="2024"):
     Returns:
         dict avec taux, nombre_vaccines, etc.
     """
-    # 1. PRIORITE: Données officielles Santé Publique France (taux réels en %)
+    # 1. PRIORITE: Calculer le taux réel depuis les ACTE (vaccinations réelles)
+    taux_actes = calculer_taux_reel_depuis_actes(annee)
+    
+    if taux_actes is not None:
+        # Utiliser le taux global comme taux de vaccination pour cette région
+        return {
+            "taux_vaccination": taux_actes["taux_reel_global"],
+            "taux_65_plus": taux_actes["taux_reel_65plus"],
+            "taux_moins_65": taux_actes["taux_reel_moins65"],
+            "taux_global": taux_actes["taux_reel_global"],
+            "source": taux_actes["source"],
+            "annee": annee,
+            "note": taux_actes["note"]
+        }
+    
+    # 2. Fallback: Données officielles Santé Publique France (taux populations à risque)
     taux_reel = get_taux_couverture_reel_region(code_region, annee)
     
     if taux_reel is not None:
+        # Ajouter un avertissement que ce sont des taux populations à risque
+        taux_reel["avertissement"] = "Taux pour populations à risque uniquement"
         return taux_reel
     
-    # 2. Fallback: Essayer calcul depuis fichiers IQVIA
+    # 3. Fallback: Essayer calcul depuis fichiers IQVIA
     df_couverture = charger_fichier_local(annee, "couverture")
     taux_local = extraire_taux_couverture_region(df_couverture, code_region)
     
@@ -273,7 +347,7 @@ def get_donnees_vaccination_region(code_region, annee="2024"):
             "avertissement": "Données IQVIA en milliers - taux calculé approximatif"
         }
     
-    # 3. Dernier recours: simuler
+    # 4. Dernier recours: simuler
     return {
         "taux_vaccination": 55.0 + (hash(code_region) % 20),
         "source": "simule",
