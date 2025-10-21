@@ -10,8 +10,24 @@ from app.vaccination import (
     get_details_zone,
     get_statistiques_nationales
 )
-# TODO: Ajouter analyse intelligente plus tard
-# from app.analyse_intelligente import ...
+from app.prediction import (
+    predire_besoins_prochains_mois,
+    get_stock_actuel_simule
+)
+from app.couverture_vaccins import (
+    # HPV
+    get_hpv_national,
+    get_hpv_regional,
+    get_hpv_departemental,
+    # Grippe détaillée
+    get_grippe_national,
+    get_grippe_regional,
+    get_grippe_departemental,
+    # Utilitaires
+    get_annees_disponibles,
+    get_liste_regions,
+    get_liste_departements
+)
 
 # Application FastAPI
 app = FastAPI(
@@ -34,18 +50,39 @@ app.add_middleware(
 def root():
     """Page d'accueil."""
     return {
-        "message": "API Grippe - Module Vaccination + Analyse Intelligente",
-        "version": "2.0.0",
+        "message": "API Grippe - Vaccination + Prédiction + Couvertures Détaillées",
+        "version": "3.0.0",
         "endpoints": {
-            "vaccination_zones": "/vaccination/zones",
-            "vaccination_zone": "/vaccination/zone/{zone_code}",
-            "vaccination_national": "/vaccination/national",
-            "analyse_zones_sous_vaccinees": "/analyse/zones-sous-vaccinees",
-            "prediction_besoins_vaccins": "/analyse/prediction-besoins",
-            "optimisation_distribution": "/analyse/optimisation-distribution",
-            "prediction_urgences": "/analyse/prediction-urgences"
-        },
-        "ia_locale": "Ollama (llama3.2)"
+            "vaccination_zones": {
+                "zones": "/vaccination/zones",
+                "zone_details": "/vaccination/zone/{zone_code}",
+                "national": "/vaccination/national"
+            },
+            "prediction": {
+                "doses_nationales": "/prediction/doses",
+                "doses_par_zone": "/prediction/doses/zone/{zone_code}",
+                "stock_actuel": "/prediction/stock"
+            },
+            "hpv": {
+                "national": "/couverture/hpv/national",
+                "regional": "/couverture/hpv/regional",
+                "regional_detail": "/couverture/hpv/regional/{code_region}",
+                "departemental": "/couverture/hpv/departemental",
+                "departemental_detail": "/couverture/hpv/departemental/{code_dept}"
+            },
+            "grippe_detaillee": {
+                "national": "/couverture/grippe/national",
+                "regional": "/couverture/grippe/regional",
+                "regional_detail": "/couverture/grippe/regional/{code_region}",
+                "departemental": "/couverture/grippe/departemental",
+                "departemental_detail": "/couverture/grippe/departemental/{code_dept}"
+            },
+            "utilitaires": {
+                "annees_disponibles": "/couverture/annees",
+                "liste_regions": "/couverture/regions",
+                "liste_departements": "/couverture/departements"
+            }
+        }
     }
 
 
@@ -131,33 +168,40 @@ def get_vaccination_national(annee: str = "2024"):
         }
 
 
-# =============================================================================
-# PARTIE 2 : ANALYSES INTELLIGENTES avec IA
-# =============================================================================
+# ============================================
+# PARTIE 2 : PRÉDICTION DES BESOINS EN DOSES
+# ============================================
 
-@app.get("/analyse/zones-sous-vaccinees")
-def analyse_zones_sous_vaccinees_route(annee: str = "2024", seuil_critique: float = 50.0):
+@app.get("/prediction/doses")
+def get_prediction_doses_nationales(horizon_mois: int = 1):
     """
-    **🎯 OBJECTIF 1 : Identifier les zones sous-vaccinées**
+    **📊 Prédiction des besoins en doses au niveau national**
     
-    Analyse avec IA locale (Ollama) :
-    - Écart par rapport à l'objectif national (75%)
-    - Évolution historique 2011-2024
-    - Régions prioritaires
-    - Recommandations IA personnalisées
+    Prédiction basée sur :
+    - Données historiques 2021-2024 (IQVIA)
+    - Moyenne mobile + Tendance
+    - Saisonnalité (pic oct-déc)
     
     **Paramètres** :
-    - `annee` : Année d'analyse (défaut: 2024)
-    - `seuil_critique` : Seuil critique en % (défaut: 50%)
+    - `horizon_mois` : Nombre de mois à prédire (1-3)
     
-    **Source données** : Santé Publique France (taux officiels)
+    **Retourne** :
+    - Prédictions mensuelles
+    - Statistiques historiques
+    - Contexte saisonnier
     """
     try:
-        resultat = identifier_zones_sous_vaccinees(annee, seuil_critique)
+        if horizon_mois < 1 or horizon_mois > 3:
+            return {
+                "success": False,
+                "error": "horizon_mois doit être entre 1 et 3"
+            }
+        
+        prediction = predire_besoins_prochains_mois(zone_code=None, horizon_mois=horizon_mois)
+        
         return {
             "success": True,
-            "objectif": "Identifier les zones sous-vaccinées",
-            "data": resultat
+            "data": prediction
         }
     except Exception as e:
         return {
@@ -166,28 +210,37 @@ def analyse_zones_sous_vaccinees_route(annee: str = "2024", seuil_critique: floa
         }
 
 
-@app.get("/analyse/prediction-besoins")
-def prediction_besoins_vaccins_route(annee_cible: str = "2025"):
+@app.get("/prediction/doses/zone/{zone_code}")
+def get_prediction_doses_zone(zone_code: str, horizon_mois: int = 1):
     """
-    **🎯 OBJECTIF 2 : Prédire les besoins en vaccins**
+    **📊 Prédiction des besoins en doses par zone (A, B, C)**
     
-    Analyse prédictive avec régression linéaire + IA :
-    - Régression linéaire 2019-2024
-    - Prédiction taux de couverture 2025
-    - Calcul besoins en doses par région
-    - Recommandations stratégiques IA
+    Prédiction ajustée par zone en fonction de la population
     
     **Paramètres** :
-    - `annee_cible` : Année de prédiction (défaut: 2025)
-    
-    **Source données** : Historique Santé Publique France + Populations INSEE
+    - `zone_code` : Code zone (A, B ou C)
+    - `horizon_mois` : Nombre de mois à prédire (1-3)
     """
     try:
-        resultat = predire_besoins_vaccins(annee_cible)
+        zone_code = zone_code.upper()
+        
+        if zone_code not in ["A", "B", "C"]:
+            return {
+                "success": False,
+                "error": "zone_code doit être A, B ou C"
+            }
+        
+        if horizon_mois < 1 or horizon_mois > 3:
+            return {
+                "success": False,
+                "error": "horizon_mois doit être entre 1 et 3"
+            }
+        
+        prediction = predire_besoins_prochains_mois(zone_code=zone_code, horizon_mois=horizon_mois)
+        
         return {
             "success": True,
-            "objectif": "Prédire les besoins en vaccins",
-            "data": resultat
+            "data": prediction
         }
     except Exception as e:
         return {
@@ -196,28 +249,30 @@ def prediction_besoins_vaccins_route(annee_cible: str = "2025"):
         }
 
 
-@app.get("/analyse/optimisation-distribution")
-def optimisation_distribution_route(annee: str = "2024"):
+@app.get("/prediction/stock")
+def get_stock_actuel(zone_code: str = None):
     """
-    **🎯 OBJECTIF 3 : Optimiser la distribution par zones**
+    **📦 Stock actuel de doses disponibles**
     
-    Analyse d'efficacité avec IA :
-    - Taux d'utilisation doses/actes par région
-    - Identification du gaspillage
-    - Zones à optimiser
-    - Recommandations concrètes IA
+    Retourne le stock actuel simulé (pour démo)
     
     **Paramètres** :
-    - `annee` : Année d'analyse (défaut: 2024)
-    
-    **Source données** : IQVIA (doses distribuées + actes réalisés)
+    - `zone_code` : Code zone (A, B, C) ou None pour national
     """
     try:
-        resultat = optimiser_distribution_zones(annee)
+        if zone_code:
+            zone_code = zone_code.upper()
+            if zone_code not in ["A", "B", "C"]:
+                return {
+                    "success": False,
+                    "error": "zone_code doit être A, B ou C"
+                }
+        
+        stock = get_stock_actuel_simule(zone_code=zone_code)
+        
         return {
             "success": True,
-            "objectif": "Optimiser la distribution par zones",
-            "data": resultat
+            "data": stock
         }
     except Exception as e:
         return {
@@ -226,28 +281,301 @@ def optimisation_distribution_route(annee: str = "2024"):
         }
 
 
-@app.get("/analyse/prediction-urgences")
-def prediction_urgences_route(periode: str = "hiver_2024"):
+# ============================================
+# PARTIE 3 : COUVERTURES VACCINALES DÉTAILLÉES
+# ============================================
+
+# ------------------
+# HPV (Papillomavirus)
+# ------------------
+
+@app.get("/couverture/hpv/national")
+def get_couverture_hpv_national(annee_debut: str = "2022"):
     """
-    **🎯 OBJECTIF 4 : Anticiper les passages aux urgences**
+    **💉 Couverture vaccinale HPV au niveau national**
     
-    Analyse de corrélation + prédiction avec IA :
-    - Corrélation vaccination ↔ passages urgences
-    - Impact simulation (+10 points de couverture)
-    - Prédiction par région
-    - Stratégies de réduction avec IA
+    Données HPV (filles et garçons, doses 1 et 2) depuis 2022
     
     **Paramètres** :
-    - `periode` : Période d'analyse (défaut: hiver_2024)
+    - `annee_debut` : Année de début (défaut: 2022)
     
-    **Source données** : Passages urgences OSCOUR + Couverture vaccinale
+    **Retourne** :
+    - Évolution annuelle HPV filles/garçons
     """
     try:
-        resultat = anticiper_passages_urgences(periode)
+        data = get_hpv_national(annee_debut=annee_debut)
         return {
             "success": True,
-            "objectif": "Anticiper les passages aux urgences",
-            "data": resultat
+            "data": data
+        }
+    except Exception as e:
+        return {
+            "success": False,
+            "error": str(e)
+        }
+
+
+@app.get("/couverture/hpv/regional")
+def get_couverture_hpv_regional_tous(annee_debut: str = "2022"):
+    """
+    **💉 Couverture HPV toutes les régions**
+    
+    **Paramètres** :
+    - `annee_debut` : Année de début (défaut: 2022)
+    """
+    try:
+        data = get_hpv_regional(code_region=None, annee_debut=annee_debut)
+        return {
+            "success": True,
+            "data": data
+        }
+    except Exception as e:
+        return {
+            "success": False,
+            "error": str(e)
+        }
+
+
+@app.get("/couverture/hpv/regional/{code_region}")
+def get_couverture_hpv_regional_detail(code_region: str, annee_debut: str = "2022"):
+    """
+    **💉 Couverture HPV d'une région spécifique**
+    
+    **Paramètres** :
+    - `code_region` : Code région (ex: "11" pour IDF)
+    - `annee_debut` : Année de début (défaut: 2022)
+    """
+    try:
+        data = get_hpv_regional(code_region=code_region, annee_debut=annee_debut)
+        return {
+            "success": True,
+            "data": data
+        }
+    except Exception as e:
+        return {
+            "success": False,
+            "error": str(e)
+        }
+
+
+@app.get("/couverture/hpv/departemental")
+def get_couverture_hpv_departemental_tous(annee_debut: str = "2022"):
+    """
+    **💉 Couverture HPV tous les départements**
+    
+    **Paramètres** :
+    - `annee_debut` : Année de début (défaut: 2022)
+    """
+    try:
+        data = get_hpv_departemental(code_dept=None, annee_debut=annee_debut)
+        return {
+            "success": True,
+            "data": data
+        }
+    except Exception as e:
+        return {
+            "success": False,
+            "error": str(e)
+        }
+
+
+@app.get("/couverture/hpv/departemental/{code_dept}")
+def get_couverture_hpv_departemental_detail(code_dept: str, annee_debut: str = "2022"):
+    """
+    **💉 Couverture HPV d'un département spécifique**
+    
+    **Paramètres** :
+    - `code_dept` : Code département (ex: "75" pour Paris)
+    - `annee_debut` : Année de début (défaut: 2022)
+    """
+    try:
+        data = get_hpv_departemental(code_dept=code_dept, annee_debut=annee_debut)
+        return {
+            "success": True,
+            "data": data
+        }
+    except Exception as e:
+        return {
+            "success": False,
+            "error": str(e)
+        }
+
+
+# ------------------
+# GRIPPE DÉTAILLÉE
+# ------------------
+
+@app.get("/couverture/grippe/national")
+def get_couverture_grippe_national_route(annee: str = None):
+    """
+    **🦠 Couverture vaccinale grippe détaillée au niveau national**
+    
+    Toutes les catégories :
+    - Moins de 65 ans
+    - 65 ans et plus
+    - 65-74 ans
+    - 75 ans et plus
+    - Résidents EHPAD
+    - Professionnels de santé
+    
+    **Paramètres** :
+    - `annee` : Année spécifique ou None pour toutes les années
+    """
+    try:
+        data = get_grippe_national(annee=annee)
+        return {
+            "success": True,
+            "data": data
+        }
+    except Exception as e:
+        return {
+            "success": False,
+            "error": str(e)
+        }
+
+
+@app.get("/couverture/grippe/regional")
+def get_couverture_grippe_regional_tous(annee: str = None):
+    """
+    **🦠 Couverture grippe toutes les régions**
+    
+    **Paramètres** :
+    - `annee` : Année spécifique ou None pour toutes
+    """
+    try:
+        data = get_grippe_regional(code_region=None, annee=annee)
+        return {
+            "success": True,
+            "data": data
+        }
+    except Exception as e:
+        return {
+            "success": False,
+            "error": str(e)
+        }
+
+
+@app.get("/couverture/grippe/regional/{code_region}")
+def get_couverture_grippe_regional_detail(code_region: str, annee: str = None):
+    """
+    **🦠 Couverture grippe d'une région spécifique**
+    
+    **Paramètres** :
+    - `code_region` : Code région (ex: "11")
+    - `annee` : Année spécifique ou None pour toutes
+    """
+    try:
+        data = get_grippe_regional(code_region=code_region, annee=annee)
+        return {
+            "success": True,
+            "data": data
+        }
+    except Exception as e:
+        return {
+            "success": False,
+            "error": str(e)
+        }
+
+
+@app.get("/couverture/grippe/departemental")
+def get_couverture_grippe_departemental_tous(annee: str = None):
+    """
+    **🦠 Couverture grippe tous les départements**
+    
+    **Paramètres** :
+    - `annee` : Année spécifique ou None pour toutes
+    """
+    try:
+        data = get_grippe_departemental(code_dept=None, annee=annee)
+        return {
+            "success": True,
+            "data": data
+        }
+    except Exception as e:
+        return {
+            "success": False,
+            "error": str(e)
+        }
+
+
+@app.get("/couverture/grippe/departemental/{code_dept}")
+def get_couverture_grippe_departemental_detail(code_dept: str, annee: str = None):
+    """
+    **🦠 Couverture grippe d'un département spécifique**
+    
+    **Paramètres** :
+    - `code_dept` : Code département (ex: "75")
+    - `annee` : Année spécifique ou None pour toutes
+    """
+    try:
+        data = get_grippe_departemental(code_dept=code_dept, annee=annee)
+        return {
+            "success": True,
+            "data": data
+        }
+    except Exception as e:
+        return {
+            "success": False,
+            "error": str(e)
+        }
+
+
+# ------------------
+# UTILITAIRES
+# ------------------
+
+@app.get("/couverture/annees")
+def get_annees_disponibles_route():
+    """
+    **📅 Liste des années disponibles**
+    
+    Retourne les années avec données HPV et Grippe
+    """
+    try:
+        data = get_annees_disponibles()
+        return {
+            "success": True,
+            "data": data
+        }
+    except Exception as e:
+        return {
+            "success": False,
+            "error": str(e)
+        }
+
+
+@app.get("/couverture/regions")
+def get_liste_regions_route():
+    """
+    **🗺️ Liste de toutes les régions**
+    
+    Retourne la liste des régions avec codes
+    """
+    try:
+        data = get_liste_regions()
+        return {
+            "success": True,
+            "data": data
+        }
+    except Exception as e:
+        return {
+            "success": False,
+            "error": str(e)
+        }
+
+
+@app.get("/couverture/departements")
+def get_liste_departements_route():
+    """
+    **🏘️ Liste de tous les départements**
+    
+    Retourne la liste des départements avec codes et régions
+    """
+    try:
+        data = get_liste_departements()
+        return {
+            "success": True,
+            "data": data
         }
     except Exception as e:
         return {
