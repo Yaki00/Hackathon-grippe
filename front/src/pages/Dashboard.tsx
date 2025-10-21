@@ -7,7 +7,7 @@ import { zoneApi } from '../api/zoneApi';
 import type { VaccinationByZone, VaccinationStockByZone } from '../entities/VaccinationByZone';
 				import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from "recharts";
 import { aggregateByZoneAndYear, groupByZone } from '../utils';
-
+import { LineChart, Line } from 'recharts'
 const columns = [
   {
     title: 'Zone',
@@ -107,6 +107,20 @@ export const Dashboard = () => {
 		fetchHpvByRegion();
 	}, []) 
 	if (loading || loadingStock || loadingHpv) return <div>Loading...</div>;
+
+
+	const CustomLegend = () => {
+  return (
+    <div style={{ color: '#eee', fontSize: 14, lineHeight: 1.6, marginLeft: 100 }}>
+      <div><span style={{ color: '#6a89cc' }}>■</span> Zone A filles dose 1</div>
+      <div><span style={{ color: '#78e08f' }}>■</span> Zone B filles dose 1</div>
+      <div><span style={{ color: '#f6b93b' }}>■</span> Zone C filles dose 1</div>
+      <div><span style={{ color: '#4834d4', borderBottom: '2px dashed #4834d4', display: 'inline-block', width: 12 }}></span> Zone A garçons dose 1 (dashed)</div>
+      <div><span style={{ color: '#38ada9', borderBottom: '2px dashed #38ada9', display: 'inline-block', width: 12 }}></span> Zone B garçons dose 1 (dashed)</div>
+      <div><span style={{ color: '#e58e26', borderBottom: '2px dashed #e58e26', display: 'inline-block', width: 12 }}></span> Zone C garçons dose 1 (dashed)</div>
+    </div>
+  );
+};
   return (
 	<>
 			<DisplayData title="Under-Vaccinated Zones" content="Highlighting areas with low vaccination rates" type="card">
@@ -127,21 +141,35 @@ export const Dashboard = () => {
 			<DisplayData title="Vaccine Stock vs Need" content="Comparing current inventory with forecasted needs" type="card">
 
 
-    <BarChart width={800} height={400} data={dataHpvByZone}>
-      <CartesianGrid strokeDasharray="3 3" />
-      <XAxis dataKey="annee" />
-      <YAxis />
-      <Tooltip />
-      <Legend />
-
-      <Bar dataKey="zoneA_dose1_filles" fill="#8884d8" />
-      <Bar dataKey="zoneB_dose1_filles" fill="#82ca9d" />
-      <Bar dataKey="zoneC_dose1_filles" fill="#ffc658" />
-	  <Bar dataKey="zoneA_dose1_garcons" fill="#aa84d8" />
-	  <Bar dataKey="zoneB_dose1_garcons" fill="#55ca9d" />
-	  <Bar dataKey="zoneC_dose1_garcons" fill="#ff6658" />
-      {/* tu peux ajouter d'autres Bar pour garçons et dose 2 si besoin */}
-    </BarChart>
+     <div style={{ backgroundColor: '#121c21', padding: 20,display: 'flex', alignItems: 'center' }}>
+    <LineChart width={1000} height={400} data={dataHpvByZone}>
+      <CartesianGrid stroke="#2c3e50" strokeDasharray="3 3" /> {/* grille plus sombre */}
+      <XAxis dataKey="annee" stroke="#ccc" /> {/* axe X clair */}
+      <YAxis stroke="#ccc" tickFormatter={(value) => `${value}%`} />
+      <Tooltip
+		contentStyle={{ backgroundColor: '#1f2a33', borderColor: '#555' }}
+		labelStyle={{ color: '#eee' }}
+		itemStyle={{ color: '#fff' }}
+		formatter={(value) => `${value}%`}
+		/>
+      <Legend
+  layout="vertical"
+  align="right"
+  verticalAlign="middle"
+  content={<CustomLegend />}
+/>
+      
+      {/* lignes filles dose 1 */}
+      <Line type="monotone" dataKey="zoneA_dose1_filles" stroke="#6a89cc" strokeWidth={2} />
+      <Line type="monotone" dataKey="zoneB_dose1_filles" stroke="#78e08f" strokeWidth={2} />
+      <Line type="monotone" dataKey="zoneC_dose1_filles" stroke="#f6b93b" strokeWidth={2} />
+      
+      {/* lignes garçons dose 1 */}
+      <Line type="monotone" dataKey="zoneA_dose1_garcons" stroke="#4834d4" strokeWidth={2} strokeDasharray="5 5" />
+      <Line type="monotone" dataKey="zoneB_dose1_garcons" stroke="#38ada9" strokeWidth={2} strokeDasharray="5 5" />
+      <Line type="monotone" dataKey="zoneC_dose1_garcons" stroke="#e58e26" strokeWidth={2} strokeDasharray="5 5" />
+    </LineChart>
+  </div>
 			</DisplayData>
 	</>
   );
