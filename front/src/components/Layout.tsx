@@ -131,6 +131,10 @@ export const Layout = ({ children }: { children: React.ReactNode }) => {
 						<Link to="/urgence" style={{color: "white", textDecoration: "none"}}>
 							<UlItem $active={location.pathname === '/urgence'} $inHeader>Urgence</UlItem>
 						</Link>
+						<Link to="/couts" style={{color: "white", textDecoration: "none"}}>
+							<UlItem $active={location.pathname === '/couts'} $inHeader>Coûts</UlItem>
+						</Link>
+						
 					</UlStyle>
 				</NavLinks>
 			)}
@@ -149,6 +153,9 @@ export const Layout = ({ children }: { children: React.ReactNode }) => {
 					</Link>
 					<Link to="/urgence" style={{color: "white", textDecoration: "none"}}>
 						<UlItem $active={location.pathname === '/urgence'}>Urgence</UlItem>
+					</Link>
+					<Link to="/couts" style={{color: "white", textDecoration: "none"}}>
+						<UlItem $active={location.pathname === '/couts'}>Coûts</UlItem>
 					</Link>
 				</UlStyle>
 			</div>

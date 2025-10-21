@@ -26,9 +26,9 @@ const Subtitle = styled.p`
 `;
 
 const Content = styled.div<{type?: string}>`
-display: ${props => props.type === 'table' ? 'block' : 'grid'};
-grid-template-columns: ${props => props.type === 'table' ? 'none' : 'repeat(3, 1fr)'};
-gap: ${props => props.type === 'table' ? '0' : '20px'};
+display: ${props => props.type === 'table' ? 'block' : props.type === 'card' ? 'block' : 'grid'};
+grid-template-columns: ${props => props.type === 'table' ? 'none' : props.type === 'card' ? 'none' : 'repeat(3, 1fr)'};
+gap: ${props => props.type === 'table' ? '0' : props.type === 'card' ? '0' : '20px'};
 `;
 
 export const DisplayData = ({ title, content, type, children }: DisplayDataProps) => {
