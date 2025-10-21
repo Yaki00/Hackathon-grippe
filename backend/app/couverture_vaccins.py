@@ -316,6 +316,94 @@ def get_hpv_departemental(code_dept: Optional[str] = None, annee_debut: str = "2
         }
 
 
+def get_grippe_par_zones(annee: Optional[str] = None) -> Dict:
+    """
+    Récupère les données grippe groupées par zones (A, B, C)
+    
+    Args:
+        annee: Année spécifique ou None pour toutes
+    """
+    # Récupérer toutes les données régionales
+    data_regional = get_grippe_regional(code_region=None, annee=annee)
+    
+    if "error" in data_regional:
+        return data_regional
+    
+    # Mapping des régions vers les zones
+    zones_regions = {
+        "A": ["11", "84", "93", "76", "75"],  # Grandes métropoles
+        "B": ["32", "44", "53", "52"],        # Agglomérations moyennes  
+        "C": ["28", "27", "24", "94"]         # Reste de la France
+    }
+    
+    # Noms des zones
+    zones_noms = {
+        "A": "Grandes Métropoles",
+        "B": "Agglomérations Moyennes", 
+        "C": "Reste de la France"
+    }
+    
+    # Grouper par zone
+    zones_data = {}
+    
+    for zone_code, regions_codes in zones_regions.items():
+        zones_data[zone_code] = {
+            "zone_code": zone_code,
+            "zone_nom": zones_noms[zone_code],
+            "regions": [],
+            "statistiques": {
+                "total_regions": 0,
+                "population_totale": 0,
+                "taux_moyen_moins_65": 0,
+                "taux_moyen_65_plus": 0,
+                "taux_moyen_global": 0
+            }
+        }
+        
+        # Ajouter les régions de cette zone
+        for region in data_regional.get("regions", []):
+            if region["code_region"] in regions_codes:
+                zones_data[zone_code]["regions"].append(region)
+                zones_data[zone_code]["statistiques"]["total_regions"] += 1
+        
+        # Calculer les statistiques moyennes pour la zone
+        if zones_data[zone_code]["regions"]:
+            total_moins_65 = 0
+            total_65_plus = 0
+            count_moins_65 = 0
+            count_65_plus = 0
+            
+            for region in zones_data[zone_code]["regions"]:
+                for data_point in region.get("data", []):
+                    if data_point.get("moins_65_ans") is not None:
+                        total_moins_65 += data_point["moins_65_ans"]
+                        count_moins_65 += 1
+                    if data_point.get("65_ans_et_plus") is not None:
+                        total_65_plus += data_point["65_ans_et_plus"]
+                        count_65_plus += 1
+            
+            if count_moins_65 > 0:
+                zones_data[zone_code]["statistiques"]["taux_moyen_moins_65"] = round(total_moins_65 / count_moins_65, 2)
+            if count_65_plus > 0:
+                zones_data[zone_code]["statistiques"]["taux_moyen_65_plus"] = round(total_65_plus / count_65_plus, 2)
+            
+            # Taux global moyen
+            if count_moins_65 > 0 and count_65_plus > 0:
+                zones_data[zone_code]["statistiques"]["taux_moyen_global"] = round(
+                    (total_moins_65 + total_65_plus) / (count_moins_65 + count_65_plus), 2
+                )
+    
+    return {
+        "niveau": "Zones",
+        "annee": annee,
+        "zones": list(zones_data.values()),
+        "statistiques_globales": {
+            "total_zones": len(zones_data),
+            "total_regions": sum(zone["statistiques"]["total_regions"] for zone in zones_data.values())
+        }
+    }
+
+
 def get_grippe_departemental(code_dept: Optional[str] = None, annee: Optional[str] = None) -> Dict:
     """
     Récupère les données grippe au niveau départemental

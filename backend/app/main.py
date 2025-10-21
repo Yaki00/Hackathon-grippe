@@ -4,6 +4,7 @@ API Backend Grippe - Partie VACCINATION
 """
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from datetime import datetime
 
 from app.vaccination import (
     calculer_taux_par_zone,
@@ -27,10 +28,31 @@ from app.couverture_vaccins import (
     get_grippe_national,
     get_grippe_regional,
     get_grippe_departemental,
+    get_grippe_par_zones,
     # Utilitaires
     get_annees_disponibles,
     get_liste_regions,
     get_liste_departements
+)
+from app.urgences import (
+    get_urgences_par_departement,
+    get_urgences_par_region,
+    get_urgences_nationales,
+    get_urgences_par_zone
+)
+from app.ia_analyzer import analyze_with_ai, get_ollama_status
+from app.medecins_reels import (
+    get_medecins_reels_par_region,
+    get_medecins_reels_par_zone,
+    get_statistiques_medecins_reels,
+    rechercher_medecins_reels,
+    get_comptage_medecins_par_region
+)
+from app.couts_reels import (
+    get_couts_vaccination_grippe,
+    get_couts_par_zone,
+    get_couts_par_departement,
+    get_scenarios_vaccination
 )
 
 # Application FastAPI
@@ -71,6 +93,31 @@ def root():
                 "stock_actuel": "/prediction/stock",
                 "stock_vs_besoin": "/prediction/stock-vs-besoin"
             },
+            "urgences": {
+                "national": "/urgences/national",
+                "regional": "/urgences/regional",
+                "regional_detail": "/urgences/regional/{code_region}",
+                "departemental": "/urgences/departemental",
+                "departement_detail": "/urgences/departement/{code_departement}",
+                "par_zone": "/urgences/zone/{zone_code}"
+            },
+            "ia_analysis": {
+                "ollama_status": "/ai/status",
+                "analyze_data": "/ai/analyze"
+            },
+            "medecins": {
+                "comptage_regions": "/medecins/comptage",
+                "par_zone": "/medecins/zone/{zone_code}",
+                "par_region": "/medecins/region/{region_code}",
+                "recherche": "/medecins/recherche",
+                "statistiques": "/medecins/statistiques"
+            },
+            "couts_reels": {
+                "national": "/couts/national",
+                "par_zone": "/couts/zone/{zone_code}",
+                "par_departement": "/couts/departement/{code_departement}",
+                "scenarios": "/couts/scenarios"
+            },
             "hpv": {
                 "national": "/couverture/hpv/national",
                 "regional": "/couverture/hpv/regional",
@@ -82,6 +129,7 @@ def root():
                 "national": "/couverture/grippe/national",
                 "regional": "/couverture/grippe/regional",
                 "regional_detail": "/couverture/grippe/regional/{code_region}",
+                "par_zones": "/couverture/grippe/zones",
                 "departemental": "/couverture/grippe/departemental",
                 "departemental_detail": "/couverture/grippe/departemental/{code_dept}"
             },
@@ -623,6 +671,37 @@ def get_couverture_grippe_regional_detail(code_region: str, annee: str = None):
         }
 
 
+@app.get("/couverture/grippe/zones")
+def get_couverture_grippe_par_zones(annee: str = None):
+    """
+    **🦠 Couverture grippe groupée par zones (A, B, C)**
+    
+    Regroupe les régions par zones géographiques :
+    - Zone A : Grandes métropoles (Île-de-France, Auvergne-Rhône-Alpes, etc.)
+    - Zone B : Agglomérations moyennes 
+    - Zone C : Reste de la France
+    
+    **Paramètres** :
+    - `annee` : Année spécifique ou None pour toutes
+    
+    **Retourne** :
+    - Données groupées par zone
+    - Statistiques moyennes par zone
+    - Liste des régions dans chaque zone
+    """
+    try:
+        data = get_grippe_par_zones(annee=annee)
+        return {
+            "success": True,
+            "data": data
+        }
+    except Exception as e:
+        return {
+            "success": False,
+            "error": str(e)
+        }
+
+
 @app.get("/couverture/grippe/departemental")
 def get_couverture_grippe_departemental_tous(annee: str = None):
     """
@@ -702,6 +781,693 @@ def get_liste_regions_route():
         return {
             "success": True,
             "data": data
+        }
+    except Exception as e:
+        return {
+            "success": False,
+            "error": str(e)
+        }
+
+
+# ============================================
+# PARTIE 5 : URGENCES GRIPPE
+# ============================================
+
+@app.get("/urgences/national")
+def get_urgences_nationales_route(annee: str = None):
+    """
+    **🚨 Urgences Nationales**
+    
+    Retourne les données de passages aux urgences pour la grippe au niveau national.
+    
+    **Paramètres** :
+    - annee : Année (2020, 2021, 2022, 2023) ou None pour toutes les années
+    
+    **Retourne** :
+    - Données nationales d'urgences grippe
+    - Statistiques calculées
+    - Période des données
+    """
+    try:
+        result = get_urgences_nationales(annee)
+        
+        return {
+            "success": True,
+            "annee": annee,
+            "data": result,
+            "timestamp": datetime.now().isoformat()
+        }
+    except Exception as e:
+        return {
+            "success": False,
+            "error": str(e)
+        }
+
+
+@app.get("/urgences/regional")
+def get_urgences_regionales_route(annee: str = None):
+    """
+    **🚨 Urgences Régionales**
+    
+    Retourne les données de passages aux urgences pour la grippe par région.
+    
+    **Paramètres** :
+    - annee : Année (2020, 2021, 2022, 2023) ou None pour toutes les années
+    
+    **Retourne** :
+    - Données régionales d'urgences grippe
+    - Statistiques par région
+    - Période des données
+    """
+    try:
+        result = get_urgences_par_region(None, annee)
+        
+        return {
+            "success": True,
+            "annee": annee,
+            "data": result,
+            "timestamp": datetime.now().isoformat()
+        }
+    except Exception as e:
+        return {
+            "success": False,
+            "error": str(e)
+        }
+
+
+@app.get("/urgences/regional/{code_region}")
+def get_urgences_region_detail_route(code_region: str, annee: str = None):
+    """
+    **🚨 Urgences par Région**
+    
+    Retourne les données de passages aux urgences pour la grippe d'une région spécifique.
+    
+    **Paramètres** :
+    - code_region : Code région (11, 84, 93, etc.)
+    - annee : Année (2020, 2021, 2022, 2023) ou None pour toutes les années
+    
+    **Retourne** :
+    - Données d'urgences de la région
+    - Statistiques détaillées
+    - Période des données
+    """
+    try:
+        result = get_urgences_par_region(code_region, annee)
+        
+        if result["total_regions"] == 0:
+            return {
+                "success": False,
+                "error": f"Aucune donnée d'urgence trouvée pour la région {code_region}"
+            }
+        
+        return {
+            "success": True,
+            "region_code": code_region,
+            "annee": annee,
+            "data": result,
+            "timestamp": datetime.now().isoformat()
+        }
+    except Exception as e:
+        return {
+            "success": False,
+            "error": str(e)
+        }
+
+
+@app.get("/urgences/departemental")
+def get_urgences_departementales_route(annee: str = None):
+    """
+    **🚨 Urgences Départementales**
+    
+    Retourne les données de passages aux urgences pour la grippe par département.
+    
+    **Paramètres** :
+    - annee : Année (2020, 2021, 2022, 2023) ou None pour toutes les années
+    
+    **Retourne** :
+    - Données départementales d'urgences grippe
+    - Statistiques par département
+    - Période des données
+    """
+    try:
+        result = get_urgences_par_departement(None, annee)
+        
+        return {
+            "success": True,
+            "annee": annee,
+            "data": result,
+            "timestamp": datetime.now().isoformat()
+        }
+    except Exception as e:
+        return {
+            "success": False,
+            "error": str(e)
+        }
+
+
+@app.get("/urgences/departement/{code_departement}")
+def get_urgences_departement_detail_route(code_departement: str, annee: str = None):
+    """
+    **🚨 Urgences par Département**
+    
+    Retourne les données de passages aux urgences pour la grippe d'un département spécifique.
+    
+    **Paramètres** :
+    - code_departement : Code département (61, 75, 69, etc.)
+    - annee : Année (2020, 2021, 2022, 2023) ou None pour toutes les années
+    
+    **Retourne** :
+    - Données d'urgences du département
+    - Statistiques détaillées
+    - Période des données
+    """
+    try:
+        result = get_urgences_par_departement(code_departement, annee)
+        
+        if result["total_departements"] == 0:
+            return {
+                "success": False,
+                "error": f"Aucune donnée d'urgence trouvée pour le département {code_departement}"
+            }
+        
+        return {
+            "success": True,
+            "departement_code": code_departement,
+            "annee": annee,
+            "data": result,
+            "timestamp": datetime.now().isoformat()
+        }
+    except Exception as e:
+        return {
+            "success": False,
+            "error": str(e)
+        }
+
+
+@app.get("/urgences/zone/{zone_code}")
+def get_urgences_par_zone_route(zone_code: str, annee: str = None):
+    """
+    **🚨 Urgences par Zone**
+    
+    Retourne les données de passages aux urgences pour la grippe d'une zone spécifique (A, B, C).
+    
+    **Paramètres** :
+    - zone_code : Code zone (A, B, C)
+    - annee : Année (2020, 2021, 2022, 2023) ou None pour toutes les années
+    
+    **Retourne** :
+    - Données d'urgences de la zone
+    - Statistiques par région dans la zone
+    - Période des données
+    """
+    try:
+        if zone_code not in ["A", "B", "C"]:
+            return {
+                "success": False,
+                "error": "Zone code doit être A, B ou C"
+            }
+        
+        result = get_urgences_par_zone(zone_code, annee)
+        
+        return {
+            "success": True,
+            "zone": zone_code,
+            "annee": annee,
+            "data": result,
+            "timestamp": datetime.now().isoformat()
+        }
+    except Exception as e:
+        return {
+            "success": False,
+            "error": str(e)
+        }
+
+
+# ============================================
+# PARTIE 6 : IA OLLAMA
+# ============================================
+
+@app.get("/ai/status")
+def get_ai_status():
+    """
+    **🤖 Statut de l'IA Ollama**
+    
+    Vérifie si Ollama est disponible et liste les modèles installés
+    """
+    try:
+        status = get_ollama_status()
+        
+        return {
+            "success": True,
+            "data": status
+        }
+    except Exception as e:
+        return {
+            "success": False,
+            "error": str(e)
+        }
+
+
+@app.post("/ai/analyze")
+def analyze_vaccination_data(request: dict):
+    """
+    **🤖 Analyse IA des Données de Vaccination**
+    
+    Utilise Ollama (IA locale) pour analyser vos données de vaccination.
+    
+    **Corps de la requête** :
+    ```json
+    {
+        "prompt": "Analyse les tendances de vaccination et donne des recommandations",
+        "data_type": "zones|departements|national",
+        "model": "llama3.2",
+        "annee": "2024"
+    }
+    ```
+    
+    **Exemples de prompts** :
+    - "Analyse les zones les moins vaccinées et propose des actions"
+    - "Compare les taux de vaccination par région et identifie les disparités"
+    - "Donne des recommandations pour améliorer la couverture vaccinale"
+    - "Analyse l'évolution de la vaccination et prédit les tendances"
+    
+    **Retourne** :
+    - Analyse détaillée de l'IA
+    - Recommandations personnalisées
+    - Modèle utilisé et timestamp
+    """
+    try:
+        # Validation des paramètres
+        prompt = request.get("prompt", "")
+        data_type = request.get("data_type", "zones")
+        model = request.get("model", "llama3.2")
+        annee = request.get("annee", "2024")
+        
+        if not prompt.strip():
+            return {
+                "success": False,
+                "error": "Le prompt est requis"
+            }
+        
+        # Charger les données selon le type demandé
+        data = {}
+        
+        if data_type == "zones":
+            from app.vaccination import calculer_taux_par_zone
+            zones = calculer_taux_par_zone(annee)
+            data = {"zones": zones}
+            
+        elif data_type == "departements":
+            from app.vaccination import calculer_taux_par_departement
+            departements = calculer_taux_par_departement(annee)
+            data = {"departements": departements}
+            
+        elif data_type == "national":
+            from app.vaccination import get_statistiques_nationales
+            stats = get_statistiques_nationales(annee)
+            data = {"statistiques": stats}
+            
+        else:
+            return {
+                "success": False,
+                "error": "data_type doit être 'zones', 'departements' ou 'national'"
+            }
+        
+        # Analyser avec l'IA
+        result = analyze_with_ai(prompt, data, model)
+        
+        return {
+            "success": True,
+            "data": result
+        }
+        
+    except Exception as e:
+        return {
+            "success": False,
+            "error": str(e)
+        }
+
+
+# ============================================
+# PARTIE 7 : MÉDECINS RÉELS
+# ============================================
+
+@app.get("/medecins/comptage")
+def get_comptage_medecins():
+    """
+    **📊 Comptage des Médecins par Région**
+    
+    Retourne le nombre de médecins par région + 10 exemples par région.
+    **Optimisé** pour éviter de charger tous les médecins.
+    
+    **Retourne** :
+    - Nombre total de médecins
+    - Comptage par région
+    - 10 exemples de médecins par région (avec GPS)
+    - Top 10 des régions
+    """
+    try:
+        comptage = get_comptage_medecins_par_region()
+        
+        return {
+            "success": True,
+            "data": comptage,
+            "timestamp": datetime.now().isoformat()
+        }
+    except Exception as e:
+        return {
+            "success": False,
+            "error": str(e)
+        }
+
+
+@app.get("/medecins/zone/{zone_code}")
+def get_medecins_par_zone_api(zone_code: str, limit: int = 100, offset: int = 0):
+    """
+    **🏥 Médecins par Zone (Paginé)**
+    
+    Retourne les médecins d'une zone spécifique avec pagination.
+    
+    **Paramètres** :
+    - zone_code : Code zone (A, B, C)
+    - limit : Nombre de médecins à retourner (max 100, défaut 100)
+    - offset : Décalage pour la pagination (défaut 0)
+    
+    **Exemples** :
+    - `/medecins/zone/A` → 100 premiers médecins Zone A
+    - `/medecins/zone/A?limit=50&offset=100` → 50 médecins suivants
+    
+    **Retourne** :
+    - Médecins de la zone avec coordonnées GPS
+    - Informations de pagination
+    """
+    try:
+        if zone_code not in ["A", "B", "C"]:
+            return {
+                "success": False,
+                "error": "Zone code doit être A, B ou C"
+            }
+        
+        if limit > 100:
+            limit = 100  # Limite maximale
+        
+        result = get_medecins_reels_par_zone(zone_code, limit, offset)
+        
+        return {
+            "success": True,
+            "zone": zone_code,
+            "data": result,
+            "timestamp": datetime.now().isoformat()
+        }
+    except Exception as e:
+        return {
+            "success": False,
+            "error": str(e)
+        }
+
+
+@app.get("/medecins/region/{region_code}")
+def get_medecins_par_region_api(region_code: str, limit: int = 100, offset: int = 0):
+    """
+    **🏥 Médecins par Région (Paginé)**
+    
+    Retourne les médecins d'une région spécifique avec pagination.
+    
+    **Paramètres** :
+    - region_code : Code région (11, 84, 93, etc.)
+    - limit : Nombre de médecins à retourner (max 100, défaut 100)
+    - offset : Décalage pour la pagination (défaut 0)
+    
+    **Exemples** :
+    - `/medecins/region/11` → 100 premiers médecins Île-de-France
+    - `/medecins/region/11?limit=50&offset=100` → 50 médecins suivants
+    
+    **Retourne** :
+    - Médecins de la région avec coordonnées GPS
+    - Informations de pagination
+    """
+    try:
+        if limit > 100:
+            limit = 100  # Limite maximale
+        
+        result = get_medecins_reels_par_region(region_code, limit, offset)
+        
+        if result["pagination"]["total"] == 0:
+            return {
+                "success": False,
+                "error": f"Aucun médecin trouvé pour la région {region_code}"
+            }
+        
+        return {
+            "success": True,
+            "region_code": region_code,
+            "data": result,
+            "timestamp": datetime.now().isoformat()
+        }
+    except Exception as e:
+        return {
+            "success": False,
+            "error": str(e)
+        }
+
+
+@app.get("/medecins/recherche")
+def rechercher_medecins_api(
+    zone_code: str = None,
+    region_code: str = None,
+    departement: str = None,
+    specialite: str = None,
+    avec_gps: bool = None
+):
+    """
+    **🔍 Recherche Avancée de Médecins**
+    
+    Recherche de médecins avec filtres multiples.
+    
+    **Paramètres de recherche** :
+    - zone_code : Code zone (A, B, C)
+    - region_code : Code région (11, 84, 93, etc.)
+    - departement : Nom du département
+    - specialite : Spécialité médicale
+    - avec_gps : Avoir des coordonnées GPS (true/false)
+    
+    **Exemples** :
+    - `/medecins/recherche?avec_gps=true&zone_code=A`
+    - `/medecins/recherche?region_code=11&specialite=généraliste`
+    - `/medecins/recherche?departement=Calvados`
+    
+    **Retourne** :
+    - Médecins correspondant aux critères
+    - Coordonnées GPS pour carte
+    - Détails pratiques
+    """
+    try:
+        medecins = rechercher_medecins_reels(
+            zone_code=zone_code,
+            region_code=region_code,
+            departement=departement,
+            specialite=specialite,
+            avec_gps=avec_gps
+        )
+        
+        return {
+            "success": True,
+            "filtres_appliques": {
+                "zone_code": zone_code,
+                "region_code": region_code,
+                "departement": departement,
+                "specialite": specialite,
+                "avec_gps": avec_gps
+            },
+            "total_trouves": len(medecins),
+            "medecins": medecins,
+            "timestamp": datetime.now().isoformat()
+        }
+    except Exception as e:
+        return {
+            "success": False,
+            "error": str(e)
+        }
+
+
+@app.get("/medecins/statistiques")
+def get_statistiques_medecins_api():
+    """
+    **📊 Statistiques des Médecins**
+    
+    Retourne les statistiques globales des médecins par zone et région.
+    
+    **Retourne** :
+    - Nombre total de médecins
+    - Capacité totale de vaccination
+    - Répartition par zone
+    - Statistiques par région
+    """
+    try:
+        stats = get_statistiques_medecins_reels()
+        
+        return {
+            "success": True,
+            "statistiques": stats,
+            "timestamp": datetime.now().isoformat()
+        }
+    except Exception as e:
+        return {
+            "success": False,
+            "error": str(e)
+        }
+
+
+# ============================================
+# PARTIE 8 : COÛTS RÉELS VACCINATION
+# ============================================
+
+@app.get("/couts/national")
+def get_couts_nationaux():
+    """
+    **💰 Coûts Réels de la Vaccination Grippe - France**
+    
+    Calcule l'impact financier complet de la vaccination grippe :
+    
+    **Coûts Directs** :
+    - Vaccins (6.20€) + Honoraire pharmacien (0.60€)
+    - Consultations médicales (25€)
+    - Remboursements Sécurité Sociale (65% vaccins, 70% consultations)
+    
+    **Coûts Indirects Évités** :
+    - Consultations pour grippe (25€)
+    - Médicaments (15€)
+    - Arrêts maladie (5 jours × 50€ = 250€)
+    - Hospitalisations (3 jours × 800€ = 2,400€)
+    - Complications (500€)
+    
+    **Retourne** :
+    - Coûts totaux vaccination
+    - Économies générées
+    - ROI (Return on Investment)
+    - Répartition par acteur (Sécu, Mutuelles, Patients)
+    - Impact économique (jours d'arrêt évités, hospitalisations évitées)
+    """
+    try:
+        couts = get_couts_vaccination_grippe()
+        
+        return {
+            "success": True,
+            "data": couts,
+            "timestamp": datetime.now().isoformat()
+        }
+    except Exception as e:
+        return {
+            "success": False,
+            "error": str(e)
+        }
+
+
+@app.get("/couts/zone/{zone_code}")
+def get_couts_par_zone_api(zone_code: str):
+    """
+    **💰 Coûts de la Vaccination par Zone**
+    
+    Calcule les coûts spécifiques à une zone géographique.
+    
+    **Paramètres** :
+    - zone_code : Code zone (A, B, C)
+    
+    **Retourne** :
+    - Population de la zone
+    - Taux de vaccination zone
+    - Coûts vaccination zone
+    - Économies générées zone
+    - ROI zone
+    """
+    try:
+        if zone_code not in ["A", "B", "C"]:
+            return {
+                "success": False,
+                "error": "Zone code doit être A, B ou C"
+            }
+        
+        couts_zone = get_couts_par_zone(zone_code)
+        
+        return {
+            "success": True,
+            "zone": zone_code,
+            "data": couts_zone,
+            "timestamp": datetime.now().isoformat()
+        }
+    except Exception as e:
+        return {
+            "success": False,
+            "error": str(e)
+        }
+
+
+@app.get("/couts/departement/{code_departement}")
+def get_couts_par_departement_api(code_departement: str):
+    """
+    **💰 Coûts de la Vaccination par Département**
+    
+    Calcule les coûts spécifiques à un département.
+    
+    **Paramètres** :
+    - code_departement : Code département (75, 13, 69, etc.)
+    
+    **Exemples** :
+    - `/couts/departement/75` → Coûts Paris
+    - `/couts/departement/13` → Coûts Bouches-du-Rhône
+    - `/couts/departement/69` → Coûts Rhône
+    
+    **Retourne** :
+    - Population département
+    - Taux de vaccination département
+    - Coûts vaccination département
+    - Économies générées département
+    - ROI département
+    """
+    try:
+        couts_dept = get_couts_par_departement(code_departement)
+        
+        return {
+            "success": True,
+            "departement": code_departement,
+            "data": couts_dept,
+            "timestamp": datetime.now().isoformat()
+        }
+    except Exception as e:
+        return {
+            "success": False,
+            "error": str(e)
+        }
+
+
+@app.get("/couts/scenarios")
+def get_scenarios_vaccination_api():
+    """
+    **📊 Scénarios de Vaccination - Comparaison des Coûts**
+    
+    Compare différents taux de vaccination et leur impact financier.
+    
+    **Scénarios analysés** :
+    - 20% : Taux actuel faible
+    - 35% : Taux actuel moyen
+    - 50% : Objectif intermédiaire
+    - 70% : Objectif optimal
+    - 85% : Objectif ambitieux
+    
+    **Retourne** :
+    - Coûts par scénario
+    - Économies par scénario
+    - ROI par scénario
+    - Recommandation du taux optimal
+    - Justification économique
+    """
+    try:
+        scenarios = get_scenarios_vaccination()
+        
+        return {
+            "success": True,
+            "data": scenarios,
+            "timestamp": datetime.now().isoformat()
         }
     except Exception as e:
         return {
