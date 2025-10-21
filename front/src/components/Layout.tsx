@@ -37,7 +37,7 @@ const TitlePage = styled.h2`
 const ContainerHeader = styled.div`
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 20px;
   p{
 	max-width: 500px;
 	color: #95a0b3;
@@ -103,7 +103,7 @@ export const Layout = ({ children }: { children: React.ReactNode }) => {
 			if (currentScrollY > lastScrollY && currentScrollY > 200) {
 				setShowLinksInHeader(true);
 			} 
-			else if (currentScrollY < lastScrollY) {
+			else if (currentScrollY < lastScrollY && currentScrollY < 200) {
 				setShowLinksInHeader(false);
 			}
 			
@@ -157,7 +157,6 @@ export const Layout = ({ children }: { children: React.ReactNode }) => {
 			{children}
 		</Content>
 		</ContainerMain>
-
 		</>
 	)
 }
