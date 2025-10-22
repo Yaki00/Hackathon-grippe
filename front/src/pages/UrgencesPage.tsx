@@ -393,6 +393,100 @@ const FilterButton = styled.button<{ $active?: boolean }>`
 	}
 `;
 
+// === AI SIDEBAR COMPONENTS ===
+
+const AIButton = styled.button<{ $isOpen: boolean }>`
+  position: fixed !important;
+  top: 20px !important;
+  right: ${props => props.$isOpen ? '420px' : '20px'} !important;
+  width: 60px;
+  height: 60px;
+  background: linear-gradient(135deg, #ff6b6b 0%, #4ecdc4 25%, #45b7d1 50%, #96ceb4 75%, #feca57 100%) !important;
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+  box-shadow: 0 8px 20px rgba(255, 107, 107, 0.4);
+  transition: all 0.3s ease;
+  z-index: 1001;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  
+  &::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: linear-gradient(45deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+    transform: rotate(45deg);
+    transition: all 0.6s ease;
+    opacity: 0;
+  }
+  
+  &:hover {
+    transform: scale(1.1);
+    box-shadow: 0 12px 30px rgba(255, 107, 107, 0.6);
+    
+    &::before {
+      opacity: 1;
+      animation: shimmer 1.5s ease-in-out;
+    }
+  }
+  
+  @keyframes shimmer {
+    0% { transform: translateX(-100%) translateY(-100%) rotate(45deg); }
+    100% { transform: translateX(100%) translateY(100%) rotate(45deg); }
+  }
+`;
+
+const AISidebar = styled.div<{ $isOpen: boolean }>`
+  position: fixed;
+  top: 0;
+  right: ${props => props.$isOpen ? '0' : '-400px'};
+  width: 400px;
+  height: 100vh;
+  background: linear-gradient(135deg, #1a3a52 0%, #0d2a42 100%);
+  border-left: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: -10px 0 30px rgba(0, 0, 0, 0.3);
+  z-index: 1000;
+  transition: right 0.3s ease;
+  display: flex;
+  flex-direction: column;
+  backdrop-filter: blur(10px);
+`;
+
+const AIContent = styled.div`
+  flex: 1;
+  padding: 20px;
+  overflow-y: auto;
+  
+  @keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }
+  
+  &::-webkit-scrollbar {
+    width: 6px;
+  }
+  
+  &::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 3px;
+  }
+  
+  &::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.3);
+    border-radius: 3px;
+  }
+  
+  &::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.5);
+	}
+`;
+
 // === COMPOSANT PRINCIPAL ===
 
 export const UrgencesPage = () => {
@@ -417,6 +511,12 @@ export const UrgencesPage = () => {
   const [viewMode, setViewMode] = useState<
     "national" | "regional" | "departemental" | "zones"
   >("national");
+  
+  // IA Sidebar
+  const [isAISidebarOpen, setIsAISidebarOpen] = useState(false);
+  const [aiPrompt, setAiPrompt] = useState('');
+  const [aiResponse, setAiResponse] = useState<string>('');
+  const [isAILoading, setIsAILoading] = useState(false);
 	
 	// Charger les données
 	useEffect(() => {
@@ -470,7 +570,49 @@ export const UrgencesPage = () => {
     return pourcentage.toFixed(2) + "%";
   };
 
-  // Couleurs pour les graphiques
+  // Fonctions IA
+  const handleQuickPrompt = (prompt: string) => {
+    setAiPrompt(prompt);
+  };
+
+  const handleAIAnalysis = async () => {
+    if (!aiPrompt.trim()) return;
+    
+    setIsAILoading(true);
+    setAiResponse('');
+    
+    try {
+      const contextData = {
+        urgencesNationales,
+        urgencesDepartementales,
+        urgencesRegionales,
+        urgencesZoneA,
+        urgencesZoneB,
+        urgencesZoneC,
+        viewMode,
+        anneeSelectionnee
+      };
+      
+      const response = await AIAnalysisService.analyzeData({
+        prompt: `Analyse spécialisée urgences grippe: ${aiPrompt}. 
+        Contexte: Données d'urgences grippe ${anneeSelectionnee || '2024'}, 
+        vue ${viewMode}, 
+        ${urgencesNationales ? `total passages: ${urgencesNationales.total_enregistrements}` : ''}. 
+        Focus sur: taux passages urgences, hospitalisations, actes SOS médecins, corrélation avec vaccination.`,
+        context_data: contextData,
+        context_type: 'urgences'
+      });
+      
+      setAiResponse(response.analysis);
+    } catch (error) {
+      setAiResponse('❌ Erreur lors de l\'analyse IA. Vérifiez que le backend est démarré.');
+      console.error('Erreur IA:', error);
+    } finally {
+      setIsAILoading(false);
+    }
+	};
+
+	// Couleurs pour les graphiques
   const COLORS = [
     "#ff4d4f",
     "#faad14",
@@ -1186,6 +1328,215 @@ export const UrgencesPage = () => {
 					</MetricSubtext>
 				</MetricCard>
 			</Section>
+
+			{/* Bouton IA flottant */}
+			<AIButton 
+				$isOpen={isAISidebarOpen}
+				onClick={() => setIsAISidebarOpen(!isAISidebarOpen)}
+				style={{
+					position: 'fixed',
+					top: '20px',
+					right: isAISidebarOpen ? '420px' : '20px',
+					zIndex: 1001
+				}}
+			>
+				✨
+			</AIButton>
+
+			{/* Barre latérale IA */}
+			<AISidebar $isOpen={isAISidebarOpen}>
+				<div style={{ 
+					padding: '20px', 
+					borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
+					display: 'flex',
+					alignItems: 'center',
+					justifyContent: 'space-between'
+				}}>
+					<h3 style={{ 
+						color: 'white', 
+						margin: 0, 
+						fontSize: '18px',
+						display: 'flex',
+						alignItems: 'center',
+						gap: '8px'
+					}}>
+						✨ Assistant IA - Urgences
+					</h3>
+					<CloseOutlined 
+						onClick={() => setIsAISidebarOpen(false)}
+						style={{ 
+							color: 'white', 
+							fontSize: '18px', 
+							cursor: 'pointer' 
+						}}
+					/>
+				</div>
+				<AIContent>
+					<div style={{ 
+						display: 'flex', 
+						flexDirection: 'column', 
+						gap: '16px', 
+						height: '100%' 
+					}}>
+						{/* Section de prompt */}
+						<div>
+							<label style={{ 
+								color: 'white', 
+								fontWeight: 600, 
+								fontSize: '14px',
+								display: 'flex',
+								alignItems: 'center',
+								gap: '8px',
+								marginBottom: '8px'
+							}}>
+								💡 Posez votre question
+							</label>
+							<TextArea
+								value={aiPrompt}
+								onChange={(e) => setAiPrompt(e.target.value)}
+								placeholder="Analysez les données d'urgences..."
+								style={{
+									background: 'rgba(255, 255, 255, 0.1)',
+									border: '1px solid rgba(255, 255, 255, 0.3)',
+									borderRadius: '8px',
+									color: 'white',
+									minHeight: '100px',
+									resize: 'none'
+								}}
+							/>
+						</div>
+
+						{/* Bouton d'analyse */}
+						<Button
+							type="primary"
+							icon={<SendOutlined />}
+							onClick={handleAIAnalysis}
+							loading={isAILoading}
+							disabled={!aiPrompt.trim() || isAILoading}
+							style={{
+								background: 'linear-gradient(135deg, #1890ff, #096dd9)',
+								border: 'none',
+								borderRadius: '8px',
+								height: '40px',
+								fontWeight: 600
+							}}
+						>
+							{isAILoading ? 'Analyse en cours...' : 'Analyser avec IA'}
+						</Button>
+
+						{/* Section de réponse */}
+						<div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+							<label style={{ 
+								color: 'white', 
+								fontWeight: 600, 
+								fontSize: '14px',
+								display: 'flex',
+								alignItems: 'center',
+								gap: '8px',
+								marginBottom: '8px'
+							}}>
+								⚡ Réponse IA
+							</label>
+							<div style={{
+								flex: 1,
+								background: 'rgba(255, 255, 255, 0.05)',
+								border: '1px solid rgba(255, 255, 255, 0.1)',
+								borderRadius: '8px',
+								padding: '16px',
+								color: 'white',
+								fontSize: '14px',
+								lineHeight: '1.6',
+								overflowY: 'auto'
+							}}>
+								{isAILoading ? (
+									<div style={{ 
+										display: 'flex', 
+										alignItems: 'center', 
+										justifyContent: 'center',
+										gap: '8px',
+										color: '#1890ff'
+									}}>
+										<div style={{
+											width: '20px',
+											height: '20px',
+											border: '2px solid #1890ff',
+											borderTop: '2px solid transparent',
+											borderRadius: '50%',
+											animation: 'spin 1s linear infinite'
+										}} />
+										Analyse en cours...
+									</div>
+								) : aiResponse ? (
+									<div 
+										style={{ whiteSpace: 'pre-wrap' }}
+										dangerouslySetInnerHTML={{
+											__html: aiResponse
+												.replace(/\*\*(.+?)\*\*/g, '<strong style="color: #52c41a; font-weight: 700;">$1</strong>')
+												.replace(/\*(.+?)\*/g, '<em style="color: #faad14;">$1</em>')
+												.replace(/^### (.+)$/gm, '<h3 style="color: #1890ff; font-size: 16px; font-weight: 700; margin: 20px 0 12px 0; border-bottom: 2px solid #1890ff; padding-bottom: 8px;">$1</h3>')
+												.replace(/^## (.+)$/gm, '<h2 style="color: #1890ff; font-size: 18px; font-weight: 700; margin: 24px 0 16px 0;">$1</h2>')
+												.replace(/^# (.+)$/gm, '<h1 style="color: #1890ff; font-size: 20px; font-weight: 700; margin: 28px 0 20px 0;">$1</h1>')
+												.replace(/^- (.+)$/gm, '<li style="margin: 8px 0; padding-left: 8px; border-left: 3px solid #1890ff;">$1</li>')
+												.replace(/^\* (.+)$/gm, '<li style="margin: 8px 0; padding-left: 8px; border-left: 3px solid #52c41a;">$1</li>')
+												.replace(/^(\d+)\. (.+)$/gm, '<div style="margin: 12px 0; padding: 12px; background: rgba(24, 144, 255, 0.1); border-radius: 8px; border-left: 4px solid #1890ff;"><strong style="color: #1890ff;">$1.</strong> $2</div>')
+												.replace(/\n\n/g, '<br/><br/>')
+										}}
+									/>
+								) : (
+									<p style={{ color: '#8c9fb8', fontStyle: 'italic' }}>
+										Posez une question pour obtenir une analyse IA des données d'urgences...
+									</p>
+								)}
+							</div>
+						</div>
+
+						{/* Prompts rapides */}
+						<div>
+							<label style={{ 
+								color: 'white', 
+								fontWeight: 600, 
+								fontSize: '12px',
+								marginBottom: '8px',
+								display: 'block'
+							}}>
+								Prompts rapides
+							</label>
+							<div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+								{[
+									"Analyse les pics d'urgences grippe par zone géographique",
+									"Quelle corrélation entre vaccination et réduction urgences ?",
+									"Comment prédire les pics d'urgences pour anticiper ?",
+									"Recommandations pour réduire les urgences grippe",
+									"Analyse des taux d'hospitalisation par groupe d'âge"
+								].map((prompt, index) => (
+									<button
+										key={index}
+										onClick={() => handleQuickPrompt(prompt)}
+										style={{
+											background: 'rgba(255, 255, 255, 0.1)',
+											border: '1px solid rgba(255, 255, 255, 0.3)',
+											color: 'white',
+											padding: '4px 8px',
+											borderRadius: '12px',
+											fontSize: '11px',
+											cursor: 'pointer',
+											transition: 'all 0.2s ease'
+										}}
+										onMouseEnter={(e) => {
+											e.currentTarget.style.background = 'rgba(255, 255, 255, 0.2)';
+										}}
+										onMouseLeave={(e) => {
+											e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)';
+										}}
+									>
+										{prompt}
+									</button>
+								))}
+							</div>
+						</div>
+					</div>
+				</AIContent>
+			</AISidebar>
 		</PageContainer>
 	);
 };
