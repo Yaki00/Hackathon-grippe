@@ -183,8 +183,8 @@ const FRANCE_BOUNDS = {
 const INITIAL_VIEW_STATE = {
   longitude: 2.3522, // Paris
   latitude: 48.8566, // Paris
-  zoom: 7.5, // Zoom initial pour voir la France entière
-  minZoom: 5.0, // Zoom minimum (vue très large)
+  zoom: 3, // Zoom initial pour voir la France entière
+  minZoom: 4.3, // Zoom minimum (vue très large)
   maxZoom: 7.5, // Zoom maximum (vue détaillée)
   pitch: 10, // Inclinaison de la caméra (0 = vue de dessus)
   maxPitch: 65, // Inclinaison maximale pour la vue 3D
@@ -202,8 +202,8 @@ const WEBGL_OPTIMIZATIONS = {
   textureQuality: 0.8,
   // Limiter le nombre de polygones rendus simultanément
   maxPolygons: 1000,
-  // Durée des transitions d'animation (en millisecondes)
-  transitionDuration: 800,
+  // Durée des transitions d'animation (en millisecondes) - optimisée pour éviter les conflits
+  transitionDuration: 600,
 };
 
 // Durée de transition optimisée pour les animations fluides
@@ -730,6 +730,11 @@ export default function MapTest({
   // GESTION DE L'ÉTAT DE LA VUE DE LA CARTE
   // ============================================================================
 
+  // État séparé pour le pitch pour éviter les conflits
+  const [currentPitch, setCurrentPitch] = useState<number>(() => {
+    return volumeMode ? 65 : pitch ?? INITIAL_VIEW_STATE.pitch;
+  });
+
   // État local pour la vue de la carte (position, zoom, inclinaison, rotation)
   const [viewState, setViewState] = useState<{
     longitude: number;
@@ -743,7 +748,7 @@ export default function MapTest({
     transitionDuration?: number;
   }>(() => ({
     ...INITIAL_VIEW_STATE,
-    pitch: pitch ?? INITIAL_VIEW_STATE.pitch,
+    pitch: currentPitch,
     bearing: bearing ?? INITIAL_VIEW_STATE.bearing,
   }));
 
@@ -801,7 +806,7 @@ export default function MapTest({
     if (selectedRegion && selectedRegion !== "all") {
       return getViewStateForZone(currentZone, selectedRegion);
     }
-    return { longitude: 2.3522, latitude: 46.3, zoom: 4.5 };
+    return { longitude: 2.3522, latitude: 46.3, zoom: 4.3 };
   }, [currentZone, selectedRegion]);
 
   // ============================================================================
@@ -811,11 +816,14 @@ export default function MapTest({
   // Mettre à jour l'inclinaison de la caméra quand le mode volume change
   useEffect(() => {
     const newPitch = volumeMode ? 65 : 10; // 65° pour la vue 3D, 10° pour la vue 2D
+    setCurrentPitch(newPitch);
+
+    // Mettre à jour directement le viewState avec une transition fluide pour le pitch
     setViewState((prev) => ({
       ...prev,
       pitch: newPitch,
       transitionDuration: TRANSITION_DURATION,
-      transitionInterpolator: new FlyToInterpolator(), // Animation fluide
+      transitionInterpolator: new FlyToInterpolator(),
     }));
   }, [volumeMode]);
 
@@ -828,19 +836,31 @@ export default function MapTest({
         dynamicViewState.latitude
       );
 
+      const finalPitch = pitch !== undefined ? pitch : currentPitch;
+
+      // Déterminer si on doit utiliser des transitions
+      const needsTransition =
+        prev.longitude !== constrainedCoords.longitude ||
+        prev.latitude !== constrainedCoords.latitude ||
+        prev.zoom !== dynamicViewState.zoom;
+
       return {
         ...prev,
         ...dynamicViewState,
         longitude: constrainedCoords.longitude,
         latitude: constrainedCoords.latitude,
-        pitch: pitch ?? prev.pitch,
-        bearing: bearing ?? prev.bearing,
-        // Ajouter la durée de transition pour les animations fluides
-        transitionDuration: TRANSITION_DURATION,
-        transitionInterpolator: new FlyToInterpolator(),
+        // Utiliser l'état séparé pour le pitch, sauf si une prop pitch est explicitement fournie
+        pitch: finalPitch,
+        bearing: bearing !== undefined ? bearing : prev.bearing,
+        // Ajouter la durée de transition seulement pour les changements de position/zoom
+        // Pas pour les changements de pitch qui sont gérés par l'autre useEffect
+        ...(needsTransition && {
+          transitionDuration: TRANSITION_DURATION,
+          transitionInterpolator: new FlyToInterpolator(),
+        }),
       };
     });
-  }, [dynamicViewState, pitch, bearing]);
+  }, [dynamicViewState, pitch, bearing, currentPitch]);
 
   // ============================================================================
   // CRÉATION DES COUCHES DE LA CARTE

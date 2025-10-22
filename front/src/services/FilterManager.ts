@@ -22,14 +22,14 @@ import type {
 export const FILTER_REGISTRY: FilterRegistry = {
   none: {
     id: "none",
-    label: "Rien",
+    label: "Aucun filtre",
     apiEndpoint: "",
     dataProcessor: (): Record<string, FilterData> => ({}),
     colorMapper: () => [120, 120, 120, 30],
   },
   vaccination: {
     id: "vaccination",
-    label: "Taux de vaccination",
+    label: "Taux de vaccination + 65 ans",
     apiEndpoint: "/vaccination/departements",
     dataProcessor: (
       rawData: ApiResponse<VaccinationApiItem>
@@ -40,7 +40,12 @@ export const FILTER_REGISTRY: FilterRegistry = {
           const departmentCode = item.code_departement;
           if (departmentCode) {
             processedData[departmentCode] = {
-              taux: item.taux_vaccination || item.taux || item.rate || 0,
+              taux:
+                item.taux_65_plus_risque ||
+                item.taux_vaccination ||
+                item.taux ||
+                item.rate ||
+                0,
               doses:
                 item.nombre_vaccines ||
                 item.nombre_doses ||
@@ -59,7 +64,9 @@ export const FILTER_REGISTRY: FilterRegistry = {
                 0,
               population_cible: item.population_cible || 0,
               taux_65_plus: item.taux_65_plus || 0,
+              taux_65_plus_risque: item.taux_65_plus_risque || 0,
               taux_moins_65: item.taux_moins_65 || 0,
+              taux_moins_65_risque: item.taux_moins_65_risque || 0,
               objectif: item.objectif || 0,
               atteint: item.atteint || false,
             };
@@ -70,9 +77,9 @@ export const FILTER_REGISTRY: FilterRegistry = {
     },
     colorMapper: (value: VaccinationData) => {
       const taux = value.taux || 0;
-      if (taux < 30) return [255, 0, 0, 255]; // Rouge
+      if (taux < 55) return [255, 0, 0, 255]; // Rouge
       if (taux < 60) return [255, 165, 0, 255]; // Orange
-      if (taux < 80) return [255, 255, 0, 255]; // Jaune
+      if (taux < 65) return [255, 255, 0, 255]; // Jaune
       return [0, 255, 0, 255]; // Vert
     },
     volumeMapper: (value: VaccinationData) => ({
@@ -80,9 +87,149 @@ export const FILTER_REGISTRY: FilterRegistry = {
       radius: Math.max(15000, Math.min(40000, value.population / 1500)),
       color: (() => {
         const taux = value.taux || 0;
-        if (taux < 30) return [255, 0, 0, 200];
+        if (taux < 55) return [255, 0, 0, 200];
         if (taux < 60) return [255, 165, 0, 200];
-        if (taux < 80) return [255, 255, 0, 200];
+        if (taux < 65) return [255, 255, 0, 200];
+        return [0, 255, 0, 200];
+      })(),
+    }),
+    displayFormatter: (value: VaccinationData) =>
+      `${(value.taux || 0).toFixed(1)}%`,
+    isValid: (value: VaccinationData) =>
+      value.taux !== undefined && value.taux >= 0,
+  },
+  "vaccination-moins-65-risque": {
+    id: "vaccination-moins-65-risque",
+    label: "Taux de vaccination - 65 ans",
+    apiEndpoint: "/vaccination/departements",
+    dataProcessor: (
+      rawData: ApiResponse<VaccinationApiItem>
+    ): Record<string, VaccinationData> => {
+      const processedData: Record<string, VaccinationData> = {};
+      if (rawData.success && rawData.departements) {
+        rawData.departements.forEach((item: VaccinationApiItem) => {
+          const departmentCode = item.code_departement;
+          if (departmentCode) {
+            processedData[departmentCode] = {
+              taux:
+                item.taux_moins_65_risque ||
+                item.taux_vaccination ||
+                item.taux ||
+                item.rate ||
+                0,
+              doses:
+                item.nombre_vaccines ||
+                item.nombre_doses ||
+                item.doses ||
+                item.doses_count ||
+                0,
+              population:
+                item.population_totale ||
+                item.population ||
+                item.population_count ||
+                0,
+              population_totale:
+                item.population_totale ||
+                item.population ||
+                item.population_count ||
+                0,
+              population_cible: item.population_cible || 0,
+              taux_65_plus: item.taux_65_plus || 0,
+              taux_65_plus_risque: item.taux_65_plus_risque || 0,
+              taux_moins_65: item.taux_moins_65 || 0,
+              taux_moins_65_risque: item.taux_moins_65_risque || 0,
+              objectif: item.objectif || 0,
+              atteint: item.atteint || false,
+            };
+          }
+        });
+      }
+      return processedData;
+    },
+    colorMapper: (value: VaccinationData) => {
+      const taux = value.taux || 0;
+      if (taux < 25) return [255, 0, 0, 255]; // Rouge
+      if (taux < 30) return [255, 165, 0, 255]; // Orange
+      if (taux < 40) return [255, 255, 0, 255]; // Jaune
+      return [0, 255, 0, 255]; // Vert
+    },
+    volumeMapper: (value: VaccinationData) => ({
+      height: Math.max(6000, value.taux * 600),
+      radius: Math.max(15000, Math.min(40000, value.population / 1500)),
+      color: (() => {
+        const taux = value.taux || 0;
+        if (taux < 25) return [255, 0, 0, 200];
+        if (taux < 30) return [255, 165, 0, 200];
+        if (taux < 40) return [255, 255, 0, 200];
+        return [0, 255, 0, 200];
+      })(),
+    }),
+    displayFormatter: (value: VaccinationData) =>
+      `${(value.taux || 0).toFixed(1)}%`,
+    isValid: (value: VaccinationData) =>
+      value.taux !== undefined && value.taux >= 0,
+  },
+  "vaccination-population-totale": {
+    id: "vaccination-population-totale",
+    label: "Taux de vaccination totale",
+    apiEndpoint: "/vaccination/departements",
+    dataProcessor: (
+      rawData: ApiResponse<VaccinationApiItem>
+    ): Record<string, VaccinationData> => {
+      const processedData: Record<string, VaccinationData> = {};
+      if (rawData.success && rawData.departements) {
+        rawData.departements.forEach((item: VaccinationApiItem) => {
+          const departmentCode = item.code_departement;
+          if (departmentCode) {
+            const nombreVaccines =
+              item.nombre_vaccines ||
+              item.nombre_doses ||
+              item.doses ||
+              item.doses_count ||
+              0;
+            const populationTotale =
+              item.population_totale ||
+              item.population ||
+              item.population_count ||
+              0;
+            const tauxCalcule =
+              populationTotale > 0
+                ? (nombreVaccines / populationTotale) * 100
+                : 0;
+
+            processedData[departmentCode] = {
+              taux: tauxCalcule,
+              doses: nombreVaccines,
+              population: populationTotale,
+              population_totale: populationTotale,
+              population_cible: item.population_cible || 0,
+              taux_65_plus: item.taux_65_plus || 0,
+              taux_65_plus_risque: item.taux_65_plus_risque || 0,
+              taux_moins_65: item.taux_moins_65 || 0,
+              taux_moins_65_risque: item.taux_moins_65_risque || 0,
+              objectif: item.objectif || 0,
+              atteint: item.atteint || false,
+            };
+          }
+        });
+      }
+      return processedData;
+    },
+    colorMapper: (value: VaccinationData) => {
+      const taux = value.taux || 0;
+      if (taux < 5) return [255, 0, 0, 255]; // Rouge
+      if (taux < 10) return [255, 165, 0, 255]; // Orange
+      if (taux < 15) return [255, 255, 0, 255]; // Jaune
+      return [0, 255, 0, 255]; // Vert
+    },
+    volumeMapper: (value: VaccinationData) => ({
+      height: Math.max(6000, value.taux * 600),
+      radius: Math.max(15000, Math.min(40000, value.population / 1500)),
+      color: (() => {
+        const taux = value.taux || 0;
+        if (taux < 5) return [255, 0, 0, 200];
+        if (taux < 10) return [255, 165, 0, 200];
+        if (taux < 15) return [255, 255, 0, 200];
         return [0, 255, 0, 200];
       })(),
     }),

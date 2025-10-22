@@ -34,26 +34,84 @@ export default function Legend({
         items.push(
           {
             color: [255, 0, 0, 255],
-            label: "< 30%",
+            label: "< 55%",
             minValue: 0,
-            maxValue: 30,
+            maxValue: 55,
           },
           {
             color: [255, 165, 0, 255],
-            label: "30% - 60%",
-            minValue: 30,
+            label: "55% - 60%",
+            minValue: 55,
             maxValue: 60,
           },
           {
             color: [255, 255, 0, 255],
-            label: "60% - 80%",
+            label: "60% - 65%",
             minValue: 60,
-            maxValue: 80,
+            maxValue: 65,
           },
           {
             color: [0, 255, 0, 255],
-            label: "≥ 80%",
-            minValue: 80,
+            label: "≥ 65%",
+            minValue: 65,
+            maxValue: 100,
+          }
+        );
+        break;
+
+      case "vaccination-moins-65-risque":
+        items.push(
+          {
+            color: [255, 0, 0, 255],
+            label: "< 25%",
+            minValue: 0,
+            maxValue: 25,
+          },
+          {
+            color: [255, 165, 0, 255],
+            label: "25% - 30%",
+            minValue: 25,
+            maxValue: 30,
+          },
+          {
+            color: [255, 255, 0, 255],
+            label: "30% - 40%",
+            minValue: 30,
+            maxValue: 40,
+          },
+          {
+            color: [0, 255, 0, 255],
+            label: "≥ 40%",
+            minValue: 40,
+            maxValue: 100,
+          }
+        );
+        break;
+
+      case "vaccination-population-totale":
+        items.push(
+          {
+            color: [255, 0, 0, 255],
+            label: "< 5%",
+            minValue: 0,
+            maxValue: 5,
+          },
+          {
+            color: [255, 165, 0, 255],
+            label: "5% - 10%",
+            minValue: 5,
+            maxValue: 10,
+          },
+          {
+            color: [255, 255, 0, 255],
+            label: "10% - 15%",
+            minValue: 10,
+            maxValue: 15,
+          },
+          {
+            color: [0, 255, 0, 255],
+            label: "≥ 15%",
+            minValue: 15,
             maxValue: 100,
           }
         );
@@ -164,8 +222,16 @@ export default function Legend({
     switch (selectedFilter) {
       case "vaccination":
         return volumeMode
-          ? "Taux de vaccination (Volume)"
-          : "Taux de vaccination";
+          ? "Taux de vaccination + 65 (Volume)"
+          : "Taux de vaccination + 65";
+      case "vaccination-moins-65-risque":
+        return volumeMode
+          ? "Taux de vaccination - 65 ans (Volume)"
+          : "Taux de vaccination - 65 ans";
+      case "vaccination-population-totale":
+        return volumeMode
+          ? "Taux de vaccination population totale (Volume)"
+          : "Taux de vaccination population totale";
       case "cost":
         return volumeMode
           ? "Coûts de vaccination (Volume)"
@@ -204,7 +270,7 @@ export default function Legend({
       style={{
         position: "absolute",
         bottom: "20px",
-        right: "20px",
+        left: "20px",
         background: "rgba(18, 28, 33, 0.95)",
         border: "1px solid rgba(255, 255, 255, 0.1)",
         borderRadius: "8px",

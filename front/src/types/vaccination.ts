@@ -19,7 +19,9 @@ export interface VaccinationData extends FilterValue {
   population_totale: number;
   population_cible: number;
   taux_65_plus: number;
+  taux_65_plus_risque: number;
   taux_moins_65: number;
+  taux_moins_65_risque: number;
   objectif: number;
   atteint: boolean;
 }
@@ -79,7 +81,9 @@ export interface VaccinationApiItem {
   population_count?: number;
   population_cible?: number;
   taux_65_plus?: number;
+  taux_65_plus_risque?: number;
   taux_moins_65?: number;
+  taux_moins_65_risque?: number;
   objectif?: number;
   atteint?: boolean;
 }
