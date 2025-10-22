@@ -49,12 +49,57 @@ def calculer_taux_par_zone(annee: str = "2024"):
         zones[zone]["vaccines"] += vaccines
         zones[zone]["sources"].append(donnees["source"])
     
+    # Calculer les taux de couverture par populations à risque par zone
+    from app.couverture_vaccins import charger_donnees_departementales
+    
+    # Charger les données de couverture départementales
+    donnees_couverture = charger_donnees_departementales()
+    donnees_annee = [d for d in donnees_couverture if d.get('an_mesure') == annee] if donnees_couverture else []
+    
     # Calculer les taux par zone
     resultats = []
     for zone_code in ["A", "B", "C"]:
         data = zones[zone_code]
         population_cible = int(data["population"] * POURCENTAGE_CIBLE)
         taux = (data["vaccines"] / population_cible * 100) if population_cible > 0 else 0
+        
+        # Calculer les taux de couverture par populations à risque pour cette zone
+        taux_couverture_zone = {
+            "grip_65plus": None,
+            "grip_6574": None, 
+            "grip_75plus": None,
+            "grip_moins65": None
+        }
+        
+        if donnees_annee:
+            # Obtenir les codes région pour cette zone
+            codes_region_zone = [str(code) for code, info in REGIONS_ZONES.items() if info["zone"] == zone_code]
+            
+            # Filtrer les départements de cette zone
+            depts_zone = [d for d in donnees_annee if str(d.get('reg', '')) in codes_region_zone]
+            
+            if depts_zone:
+                # Calculer les moyennes pondérées par population
+                total_pop_zone = sum(estimer_population_departement(d.get('dep', '')) for d in depts_zone)
+                
+                for taux_key in taux_couverture_zone.keys():
+                    valeurs_valides = []
+                    poids_population = []
+                    
+                    for dept in depts_zone:
+                        valeur = dept.get(taux_key)
+                        if valeur is not None:
+                            pop_dept = estimer_population_departement(dept.get('dep', ''))
+                            valeurs_valides.append(valeur)
+                            poids_population.append(pop_dept)
+                    
+                    if valeurs_valides:
+                        # Moyenne pondérée par population
+                        total_poids = sum(poids_population)
+                        if total_poids > 0:
+                            taux_couverture_zone[taux_key] = round(
+                                sum(v * p for v, p in zip(valeurs_valides, poids_population)) / total_poids, 1
+                            )
         
         # Déterminer sources de données
         sources_count = {}
@@ -72,7 +117,16 @@ def calculer_taux_par_zone(annee: str = "2024"):
             "atteint": taux >= 70.0,
             "nb_regions": len(data["regions"]),
             "regions": data["regions"],
-            "sources_donnees": sources_count  # Indique d'où viennent les données
+            "sources_donnees": sources_count,  # Indique d'où viennent les données
+            
+            # Nouveaux taux de couverture par populations à risque
+            "taux_couverture_populations_risque": {
+                "65_ans_et_plus": taux_couverture_zone["grip_65plus"],
+                "65_74_ans": taux_couverture_zone["grip_6574"],
+                "75_ans_et_plus": taux_couverture_zone["grip_75plus"],
+                "moins_de_65_ans": taux_couverture_zone["grip_moins65"]
+            },
+            "note_couverture": "Taux de couverture pour les populations à risque (données Santé Publique France)"
         })
     
     return resultats
