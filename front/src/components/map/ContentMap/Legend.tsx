@@ -34,26 +34,26 @@ export default function Legend({
         items.push(
           {
             color: [255, 0, 0, 255],
-            label: "< 30%",
+            label: "< 55%",
             minValue: 0,
-            maxValue: 30,
+            maxValue: 55,
           },
           {
             color: [255, 165, 0, 255],
-            label: "30% - 60%",
-            minValue: 30,
+            label: "55% - 60%",
+            minValue: 55,
             maxValue: 60,
           },
           {
             color: [255, 255, 0, 255],
-            label: "60% - 80%",
+            label: "60% - 65%",
             minValue: 60,
-            maxValue: 80,
+            maxValue: 65,
           },
           {
             color: [0, 255, 0, 255],
-            label: "≥ 80%",
-            minValue: 80,
+            label: "≥ 65%",
+            minValue: 65,
             maxValue: 100,
           }
         );
@@ -204,7 +204,7 @@ export default function Legend({
       style={{
         position: "absolute",
         bottom: "20px",
-        right: "20px",
+        left: "20px",
         background: "rgba(18, 28, 33, 0.95)",
         border: "1px solid rgba(255, 255, 255, 0.1)",
         borderRadius: "8px",

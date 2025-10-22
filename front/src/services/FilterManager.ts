@@ -70,9 +70,9 @@ export const FILTER_REGISTRY: FilterRegistry = {
     },
     colorMapper: (value: VaccinationData) => {
       const taux = value.taux || 0;
-      if (taux < 30) return [255, 0, 0, 255]; // Rouge
+      if (taux < 55) return [255, 0, 0, 255]; // Rouge
       if (taux < 60) return [255, 165, 0, 255]; // Orange
-      if (taux < 80) return [255, 255, 0, 255]; // Jaune
+      if (taux < 65) return [255, 255, 0, 255]; // Jaune
       return [0, 255, 0, 255]; // Vert
     },
     volumeMapper: (value: VaccinationData) => ({
@@ -80,9 +80,9 @@ export const FILTER_REGISTRY: FilterRegistry = {
       radius: Math.max(15000, Math.min(40000, value.population / 1500)),
       color: (() => {
         const taux = value.taux || 0;
-        if (taux < 30) return [255, 0, 0, 200];
+        if (taux < 55) return [255, 0, 0, 200];
         if (taux < 60) return [255, 165, 0, 200];
-        if (taux < 80) return [255, 255, 0, 200];
+        if (taux < 65) return [255, 255, 0, 200];
         return [0, 255, 0, 200];
       })(),
     }),

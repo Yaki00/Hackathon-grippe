@@ -183,8 +183,8 @@ const FRANCE_BOUNDS = {
 const INITIAL_VIEW_STATE = {
   longitude: 2.3522, // Paris
   latitude: 48.8566, // Paris
-  zoom: 7.5, // Zoom initial pour voir la France entière
-  minZoom: 5.0, // Zoom minimum (vue très large)
+  zoom: 3, // Zoom initial pour voir la France entière
+  minZoom: 4.3, // Zoom minimum (vue très large)
   maxZoom: 7.5, // Zoom maximum (vue détaillée)
   pitch: 10, // Inclinaison de la caméra (0 = vue de dessus)
   maxPitch: 65, // Inclinaison maximale pour la vue 3D
@@ -801,7 +801,7 @@ export default function MapTest({
     if (selectedRegion && selectedRegion !== "all") {
       return getViewStateForZone(currentZone, selectedRegion);
     }
-    return { longitude: 2.3522, latitude: 46.3, zoom: 4.5 };
+    return { longitude: 2.3522, latitude: 46.3, zoom: 4.3 };
   }, [currentZone, selectedRegion]);
 
   // ============================================================================
