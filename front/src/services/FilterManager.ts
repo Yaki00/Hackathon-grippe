@@ -171,7 +171,7 @@ export const FILTER_REGISTRY: FilterRegistry = {
   },
   "vaccination-population-totale": {
     id: "vaccination-population-totale",
-    label: "Taux de vaccination population totale",
+    label: "Taux de vaccination totale",
     apiEndpoint: "/vaccination/departements",
     dataProcessor: (
       rawData: ApiResponse<VaccinationApiItem>
