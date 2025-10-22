@@ -22,6 +22,8 @@ const Title = styled.h2`
 const Subtitle = styled.p`
     margin: 0;
   color: #768191;
+
+  max-width: 900px;
  
 `;
  

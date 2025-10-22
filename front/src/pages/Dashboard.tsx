@@ -117,14 +117,9 @@ export const Dashboard = () => {
 		fetchGrippeByZone();
 	}, []) 
 	if (loading || loadingStock || loadingHpv || loadingGrippe) return <div>Loading...</div>;
-
-
-	
-
-
   return (
 	<>
-			<DisplayData title="Under-Vaccinated Zones" content="Highlighting areas with low vaccination rates" type="card">
+			<DisplayData title="Taux de vaccination par zones" content="Mise en évidence des taux de vaccination de chaque zone afin de les comparer." type="card">
 				{data.map((zone) => (
 					<Card 
 						key={zone.zone_code}
@@ -136,13 +131,11 @@ export const Dashboard = () => {
 					/>
 				))}
 			</DisplayData>
-			<DisplayData title="Vaccine need prediction" content="Forcasted requirements based on current data" type="table">
+			<DisplayData title="Prédiction des stocks de vaccins" content="Ce tableau représente les stocks actuels des doses de vaccins avec les prévisions du stock pour les 30 prochains jours et une comparaison du surplus ou déficit afin d’optimiser la distribution des vaccins de chaque zone." type="table">
 				<TableStyle dataSource={dataStock} columns={columns} pagination={false} />
 			</DisplayData>
-			<DisplayData title="Vaccine Stock vs Need" content="Comparing current inventory with forecasted needs" type="card">
-				<CustomLineChart dataHpvByZone={dataHpvByZone} />
-			</DisplayData>
-			<DisplayData title="Grippe Vaccination Coverage by Zone" content="Analyzing flu vaccination rates across different zones" type="card">
+
+			<DisplayData title="Couverture Vaccinale contre la Grippe par Zone" content="Analyse des taux de vaccination contre la grippe dans différentes zones" type="card">
 				<GrippeBarChart data={dataGrippeByZone} />
 			</DisplayData>
 	</>
