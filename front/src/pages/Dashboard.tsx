@@ -5,8 +5,9 @@ import { Table } from 'antd';
 import { useEffect, useState } from 'react';
 import { zoneApi } from '../api/zoneApi';
 import type { VaccinationByZone, VaccinationStockByZone } from '../entities/VaccinationByZone';
-import { aggregateByZoneAndYear } from '../utils';
+import { aggregateByZoneAndYear, formatGrippeData } from '../utils/utils';
 import { CustomLineChart } from '../components/CustomLineChart';
+import { GrippeBarChart } from '../components/GrippeChart';
 const columns = [
   {
     title: 'Zone',
@@ -77,10 +78,11 @@ export const Dashboard = () => {
 	const [data, setData] = useState<VaccinationByZone[]>([]);
 	const [dataStock, setDataStock] = useState<VaccinationStockByZone[]>([]);
 	const [dataHpvByZone, setDataHpvByZone] = useState<any>([]);
+	const [dataGrippeByZone, setDataGrippeByZone] = useState<any>([]);
 	const [loadingStock, setLoadingStock] = useState<boolean>(true);
 	const [loading, setLoading] = useState<boolean>(true);
 	const [loadingHpv, setLoadingHpv] = useState<boolean>(true);
-	
+	const [loadingGrippe, setLoadingGrippe] = useState<boolean>(true);
 
 	useEffect(() => {
 
@@ -99,13 +101,22 @@ export const Dashboard = () => {
 		const fetchHpvByRegion = async () => {
 			const result = await zoneApi.getVaccinationHpvByRegion();
 			setDataHpvByZone(aggregateByZoneAndYear(result.data));
+			console.log("HPV by zone data:", result.data);
 			setLoadingHpv(false);
 		}
+		const fetchGrippeByZone = async () => {
+			const result = await zoneApi.getVaccinationGrippeByZone();
+			console.log("fff", result);
+			setDataGrippeByZone(formatGrippeData(result.data));
+			setLoadingGrippe(false);
+		}
+
 		fetchDataVaccination();
 		fetchDataStock();
 		fetchHpvByRegion();
+		fetchGrippeByZone();
 	}, []) 
-	if (loading || loadingStock || loadingHpv) return <div>Loading...</div>;
+	if (loading || loadingStock || loadingHpv || loadingGrippe) return <div>Loading...</div>;
 
 
 	
@@ -130,6 +141,9 @@ export const Dashboard = () => {
 			</DisplayData>
 			<DisplayData title="Vaccine Stock vs Need" content="Comparing current inventory with forecasted needs" type="card">
 				<CustomLineChart dataHpvByZone={dataHpvByZone} />
+			</DisplayData>
+			<DisplayData title="Grippe Vaccination Coverage by Zone" content="Analyzing flu vaccination rates across different zones" type="card">
+				<GrippeBarChart data={dataGrippeByZone} />
 			</DisplayData>
 	</>
   );

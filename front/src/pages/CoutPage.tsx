@@ -787,21 +787,38 @@ export const CoutPage = () => {
 
 			{/* SECTION 3: Répartition financière */}
 			{coutNational && (
-				<Section>
-					<SectionHeader>
-						<SectionIcon>
-							<PieChartOutlined />
-						</SectionIcon>
-						<SectionTitle>
-							<h2>Répartition Financière</h2>
-							<p>Ventilation des coûts par acteur du système de santé</p>
-						</SectionTitle>
-					</SectionHeader>
+				<>
+					<DisplayData title="Coûts Nationaux de la Vaccination" content="Impact financier complet de la vaccination grippe en France" type="card">
+						<RowStyle>
+							<CardStyle>
+								<Title>Population Française</Title>
+								<Value>{formatNumber(coutNational.population_francaise)}</Value>
+								<Label>habitants</Label>
+							</CardStyle>
+							<CardStyle>
+								<Title>Taux Vaccination</Title>
+								<Value>{(coutNational.taux_vaccination_actuel * 100).toFixed(1)}%</Value>
+								<Label>{formatNumber(coutNational.personnes_vaccinees)} vaccinés</Label>
+							</CardStyle>
+							<CardStyle>
+								<Title>Coût Total Vaccination</Title>
+								<Value>{formatCurrency(coutNational.couts_directs.cout_total_france)}</Value>
+								<Label>France entière</Label>
+							</CardStyle>
+							<CardStyle>
+								<Title>ROI</Title>
+								<Value style={{ color: coutNational.bilan_financier.roi_pourcent > 0 ? '#52c41a' : '#ff4d4f' }}>
+									{coutNational.bilan_financier.roi_pourcent > 0 ? '+' : ''}{coutNational.bilan_financier.roi_pourcent.toFixed(1)}%
+								</Value>
+								<Label>Return on Investment</Label>
+							</CardStyle>
+						</RowStyle>
+					</DisplayData>
 
-					<ChartContainer>
-						<div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '40px', alignItems: 'center' }}>
-							<ResponsiveContainer width="100%" height={350}>
-								<PieChart>
+					<DisplayData title=" Répartition des Coûts" content="Qui paie quoi dans la vaccination grippe" type="card">
+						<Row gutter={[24, 16]}>
+							<Col span={12}>
+								<PieChart width={400} height={300}>
 									<Pie
 										data={pieData}
 										cx="50%"
