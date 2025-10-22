@@ -1,6 +1,6 @@
 import "./App.css";
 import React from "react";
-import ContentMap from "./components/map/ContentMap";
+import ContentMap from "./components/map/ContentMap/ContentMap";
 
 function App() {
   return (
