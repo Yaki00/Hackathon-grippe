@@ -1,32 +1,3 @@
-import styled from "styled-components";
-import { Table } from "antd";
-import { useEffect, useState } from "react";
-import { urgencesApi } from "../api/urgencesApi";
-import type {
-  UrgencesNationales,
-  UrgencesDepartementales,
-  UrgencesRegionales,
-  UrgencesZone,
-} from "../api/urgencesApi";
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  Legend,
-  PieChart,
-  Pie,
-  Cell,
-  LineChart,
-  Line,
-  ResponsiveContainer,
-  RadarChart,
-  PolarGrid,
-  PolarAngleAxis,
-  PolarRadiusAxis,
-  Radar,
 import styled from 'styled-components';
 import { Table, Select, Tag, Tooltip as AntTooltip, Button, Input } from 'antd';
 import { useEffect, useState } from 'react';
@@ -44,21 +15,27 @@ import {
 	BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, 
 	ResponsiveContainer
 } from "recharts";
-import {
-  MedicineBoxOutlined,
-  LineChartOutlined,
-  WarningOutlined,
-  InfoCircleOutlined,
-  TeamOutlined,
-  SafetyOutlined,
-  BarChartOutlined,
-  ThunderboltOutlined,
-  CalendarOutlined,
-  GlobalOutlined,
-  EnvironmentOutlined,
-  HeartOutlined,
-  PhoneOutlined,
-} from "@ant-design/icons";
+import { 
+	MedicineBoxOutlined, 
+	LineChartOutlined, 
+	WarningOutlined,
+	InfoCircleOutlined,
+	TeamOutlined,
+	SafetyOutlined,
+	BarChartOutlined,
+	CalendarOutlined,
+	GlobalOutlined,
+	EnvironmentOutlined,
+	HeartOutlined,
+	PhoneOutlined,
+	FilterOutlined,
+	ReloadOutlined,
+	SettingOutlined,
+	CloseOutlined,
+	SendOutlined,
+	BulbOutlined,
+	ThunderboltOutlined
+} from '@ant-design/icons';
 
 // === STYLED COMPONENTS (même style que CoutPage) ===
 
