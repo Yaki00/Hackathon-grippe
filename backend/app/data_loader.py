@@ -287,9 +287,9 @@ def calculer_taux_reel_depuis_actes(annee="2024"):
         taux_reel_global = ((total_actes_65plus + total_actes_moins65) / POPULATION_FRANCE) * 100
         
         return {
-            "taux_reel_65plus": round(taux_reel_65plus, 1),
-            "taux_reel_moins65": round(taux_reel_moins65, 1),
-            "taux_reel_global": round(taux_reel_global, 1),
+            "taux_reel_65plus": float(round(taux_reel_65plus, 1)),
+            "taux_reel_moins65": float(round(taux_reel_moins65, 1)),
+            "taux_reel_global": float(round(taux_reel_global, 1)),
             "total_vaccinations_65plus": int(total_actes_65plus),
             "total_vaccinations_moins65": int(total_actes_moins65),
             "total_vaccinations": int(total_actes_65plus + total_actes_moins65),

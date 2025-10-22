@@ -781,14 +781,14 @@ def calculer_taux_par_departement(annee: str = "2024", zone_filter: str = None):
             "code_region": code_region,
             "nom_region": nom_region,
             "zone": zone,
-            "population_totale": population_estimee,
-            "population_cible": population_cible,
-            "nombre_vaccines": vaccines,
-            "taux_vaccination": round(taux_vaccination, 1),
-            "taux_65_plus_risque": dept_data.get('grip_65plus'),  # Taux pop à risque (référence)
-            "taux_moins_65_risque": dept_data.get('grip_moins65'),  # Taux pop à risque (référence)
+            "population_totale": int(population_estimee),
+            "population_cible": int(population_cible),
+            "nombre_vaccines": int(vaccines),
+            "taux_vaccination": float(round(taux_vaccination, 1)),
+            "taux_65_plus_risque": float(dept_data.get('grip_65plus')) if dept_data.get('grip_65plus') is not None else None,
+            "taux_moins_65_risque": float(dept_data.get('grip_moins65')) if dept_data.get('grip_moins65') is not None else None,
             "objectif": 70.0,
-            "atteint": taux_vaccination >= 70.0,
+            "atteint": bool(taux_vaccination >= 70.0),
             "source": source,
             "note": note,
             "annee": annee
