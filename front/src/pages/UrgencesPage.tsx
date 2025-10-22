@@ -27,6 +27,22 @@ import {
   PolarAngleAxis,
   PolarRadiusAxis,
   Radar,
+import styled from 'styled-components';
+import { Table, Select, Tag, Tooltip as AntTooltip, Button, Input } from 'antd';
+import { useEffect, useState } from 'react';
+
+const { TextArea } = Input;
+import { urgencesApi } from '../api/urgencesApi';
+import { AIAnalysisService } from '../api/aiApi';
+import type { 
+	UrgencesNationales, 
+	UrgencesDepartementales, 
+	UrgencesRegionales,
+	UrgencesZone 
+} from '../api/urgencesApi';
+import { 
+	BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, 
+	ResponsiveContainer
 } from "recharts";
 import {
   MedicineBoxOutlined,

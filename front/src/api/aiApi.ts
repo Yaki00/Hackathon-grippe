@@ -21,12 +21,20 @@ export class AIAnalysisService {
    */
   static async analyzeData(request: AIAnalysisRequest): Promise<AIAnalysisResponse> {
     try {
+      // Adapter le format pour l'endpoint backend
+      const backendRequest = {
+        prompt: request.prompt,
+        data_type: request.context_type === 'urgences' ? 'national' : 'zones',
+        model: 'llama3.2',
+        annee: '2024'
+      };
+
       const response = await fetch(`${this.baseUrl}/ai/analyze`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(request),
+        body: JSON.stringify(backendRequest),
       });
 
       if (!response.ok) {
@@ -35,12 +43,20 @@ export class AIAnalysisService {
 
       const data = await response.json();
       
-      return {
-        analysis: data.analysis || data.response || 'Analyse terminée',
-        recommendations: data.recommendations || [],
-        insights: data.insights || [],
-        status: 'success'
-      };
+      if (data.success && data.data) {
+        return {
+          analysis: data.data.analysis || data.data.response || 'Analyse terminée',
+          recommendations: data.data.recommendations || [],
+          insights: data.data.insights || [],
+          status: 'success'
+        };
+      } else {
+        return {
+          analysis: data.error || 'Erreur lors de l\'analyse',
+          status: 'error',
+          error: data.error || 'Erreur inconnue'
+        };
+      }
 
     } catch (error) {
       console.error('Erreur lors de l\'analyse IA:', error);

@@ -377,22 +377,28 @@ def calculer_statistiques_urgences(data: List[Dict[str, Any]]) -> Dict[str, Any]
     return {
         "total_entrees": len(data),
         "taux_passages": {
-            "moyenne": sum(taux_passages) / len(taux_passages) if taux_passages else 0,
-            "minimum": min(taux_passages) if taux_passages else 0,
-            "maximum": max(taux_passages) if taux_passages else 0,
-            "nombre_valides": len(taux_passages)
+            "moyenne": round(sum(taux_passages) / len(taux_passages), 2) if taux_passages else 0,
+            "minimum": round(min(taux_passages), 2) if taux_passages else 0,
+            "maximum": round(max(taux_passages), 2) if taux_passages else 0,
+            "nombre_valides": len(taux_passages),
+            "unite": "pour 100 000 habitants",
+            "note": "Taux de passages aux urgences pour grippe (pas des pourcentages)"
         },
         "taux_hospitalisations": {
-            "moyenne": sum(taux_hospit) / len(taux_hospit) if taux_hospit else 0,
-            "minimum": min(taux_hospit) if taux_hospit else 0,
-            "maximum": max(taux_hospit) if taux_hospit else 0,
-            "nombre_valides": len(taux_hospit)
+            "moyenne": round(sum(taux_hospit) / len(taux_hospit), 2) if taux_hospit else 0,
+            "minimum": round(min(taux_hospit), 2) if taux_hospit else 0,
+            "maximum": round(max(taux_hospit), 2) if taux_hospit else 0,
+            "nombre_valides": len(taux_hospit),
+            "unite": "pour 100 000 habitants",
+            "note": "Taux d'hospitalisations pour grippe (pas des pourcentages)"
         },
         "taux_actes_sos": {
-            "moyenne": sum(taux_actes) / len(taux_actes) if taux_actes else 0,
-            "minimum": min(taux_actes) if taux_actes else 0,
-            "maximum": max(taux_actes) if taux_actes else 0,
-            "nombre_valides": len(taux_actes)
+            "moyenne": round(sum(taux_actes) / len(taux_actes), 2) if taux_actes else 0,
+            "minimum": round(min(taux_actes), 2) if taux_actes else 0,
+            "maximum": round(max(taux_actes), 2) if taux_actes else 0,
+            "nombre_valides": len(taux_actes),
+            "unite": "pour 100 000 habitants",
+            "note": "Taux d'actes SOS Médecins pour grippe (pas des pourcentages)"
         }
     }
 
