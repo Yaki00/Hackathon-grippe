@@ -15,19 +15,19 @@ const columns = [
     key: 'zone',
   },
   {
-    title: 'Current Inventory',
+    title: 'Stock actuel',
     dataIndex: 'current_inventory',
     key: 'current_inventory',
 	render: (text: number) => <span style={{ color: '#95a0b3' }}>{text}</span>,
   },
   {
-    title: 'Forecasted Need',
+    title: 'Prévision des besoins sur 30 jours',
     dataIndex: 'forecasted_need_30_days',
     key: 'forecasted_need_30_days',
 	render: (text: number) => <span style={{ color: '#95a0b3' }}>{text}</span>,
   },
   {
-	title: 'Surplus/Deficit',
+	title: 'Surplus / Déficit',
 	dataIndex: 'surplus_deficit',
 	key: 'surplus_deficit',
 	render: (text: number) => (
@@ -119,7 +119,7 @@ export const Dashboard = () => {
 	if (loading || loadingStock || loadingHpv || loadingGrippe) return <div style={{display: "flex", justifyContent: "center", alignItems: "center", color: "#8c9fb8"}}>Chargement des données...</div>;
   return (
 	<>
-		<DisplayData title="Taux de vaccination par zones" content="Mise en évidence des taux de vaccination de chaque zone afin de les comparer." type="card">
+		<DisplayData title="Taux de vaccination de la Grippe par zones" content="Mise en évidence des taux de vaccination de chaque zone afin de les comparer." type="card">
 			{data.map((zone,i) => (
 				<Card 
 					key={zone.zone_code}
