@@ -5,6 +5,7 @@ export interface VaccinationByZone {
 	population_cible: number;
 	nombre_vaccines: number;
 	taux_vaccination: number;
+	taux_vaccination_a_risque: number;
 	objectif: number;
 	atteint: boolean;
 	nb_regions: number;

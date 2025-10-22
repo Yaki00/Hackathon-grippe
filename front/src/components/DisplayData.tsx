@@ -13,6 +13,9 @@ const Container = styled.div`
 display: flex;
 flex-direction: column;
 gap: 10px;
+padding: 20px;
+border-radius: 8px;
+box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 `;
  
 const Title = styled.h2`
@@ -34,8 +37,6 @@ gap: ${props => props.type === 'table' ? '0' : '20px'};
 `;
  
 export const DisplayData = ({ title, content, type, children }: DisplayDataProps) => {
- 
-    
     return (
         <Container>
             <Title>{title}</Title>

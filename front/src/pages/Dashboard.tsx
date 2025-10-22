@@ -116,28 +116,25 @@ export const Dashboard = () => {
 		fetchHpvByRegion();
 		fetchGrippeByZone();
 	}, []) 
-	if (loading || loadingStock || loadingHpv || loadingGrippe) return <div>Loading...</div>;
+	if (loading || loadingStock || loadingHpv || loadingGrippe) return <div style={{display: "flex", justifyContent: "center", alignItems: "center", color: "#8c9fb8"}}>Chargement des données...</div>;
   return (
 	<>
-			<DisplayData title="Taux de vaccination par zones" content="Mise en évidence des taux de vaccination de chaque zone afin de les comparer." type="card">
-				{data.map((zone) => (
-					<Card 
-						key={zone.zone_code}
-						title={zone.zone} 
-						rate={zone.taux_vaccination} 
-						content="vaccination rate" 
-						vaccinatedRate={zone.taux_vaccination} 
-						objectif={zone.objectif} 
-					/>
-				))}
-			</DisplayData>
-			<DisplayData title="Prédiction des stocks de vaccins" content="Ce tableau représente les stocks actuels des doses de vaccins avec les prévisions du stock pour les 30 prochains jours et une comparaison du surplus ou déficit afin d’optimiser la distribution des vaccins de chaque zone." type="table">
-				<TableStyle dataSource={dataStock} columns={columns} pagination={false} />
-			</DisplayData>
+		<DisplayData title="Taux de vaccination par zones" content="Mise en évidence des taux de vaccination de chaque zone afin de les comparer." type="card">
+			{data.map((zone,i) => (
+				<Card 
+					key={zone.zone_code}
+					content="taux de vaccination" 
+					data={data[i]}
+				/>
+			))}
+		</DisplayData>
+		<DisplayData title="Prédiction des stocks de vaccins" content="Ce tableau représente les stocks actuels des doses de vaccins avec les prévisions du stock pour les 30 prochains jours et une comparaison du surplus ou déficit afin d’optimiser la distribution des vaccins de chaque zone." type="table">
+			<TableStyle dataSource={dataStock} columns={columns} pagination={false} />
+		</DisplayData>
 
-			<DisplayData title="Couverture Vaccinale contre la Grippe par Zone" content="Analyse des taux de vaccination contre la grippe dans différentes zones" type="card">
-				<GrippeBarChart data={dataGrippeByZone} />
-			</DisplayData>
+		<DisplayData title="Couverture Vaccinale contre la Grippe par Zone" content="Analyse des taux de vaccination contre la grippe dans différentes zones" type="card">
+			<GrippeBarChart data={dataGrippeByZone} />
+		</DisplayData>
 	</>
   );
 };
