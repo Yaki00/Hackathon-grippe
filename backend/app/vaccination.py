@@ -71,6 +71,8 @@ def calculer_taux_par_zone(annee: str = "2024"):
             "grip_moins65": None
         }
         
+        taux_vaccination_a_risque = None  # Taux global des populations à risque
+        
         if donnees_annee:
             # Obtenir les codes région pour cette zone
             codes_region_zone = [str(code) for code, info in REGIONS_ZONES.items() if info["zone"] == zone_code]
@@ -100,6 +102,14 @@ def calculer_taux_par_zone(annee: str = "2024"):
                             taux_couverture_zone[taux_key] = round(
                                 sum(v * p for v, p in zip(valeurs_valides, poids_population)) / total_poids, 1
                             )
+                
+                # Calculer le taux global des populations à risque
+                # Pondération: 65+ ans (70%), <65 ans (30%) car les 65+ sont prioritaires
+                taux_65plus = taux_couverture_zone["grip_65plus"]
+                taux_moins65 = taux_couverture_zone["grip_moins65"]
+                
+                if taux_65plus is not None and taux_moins65 is not None:
+                    taux_vaccination_a_risque = round(taux_65plus * 0.7 + taux_moins65 * 0.3, 1)
         
         # Déterminer sources de données
         sources_count = {}
@@ -113,6 +123,7 @@ def calculer_taux_par_zone(annee: str = "2024"):
             "population_cible": population_cible,
             "nombre_vaccines": data["vaccines"],
             "taux_vaccination": round(taux, 1),
+            "taux_vaccination_a_risque": taux_vaccination_a_risque,  # Nouveau taux global des populations à risque
             "objectif": 70.0,
             "atteint": taux >= 70.0,
             "nb_regions": len(data["regions"]),
