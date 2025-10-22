@@ -307,12 +307,45 @@ def calculer_taux_reel_depuis_actes(annee="2024"):
 def get_donnees_vaccination_region(code_region, annee="2024"):
     """
     Récupère les données de vaccination d'une région.
-    Priorité aux données officielles Santé Publique France.
+    Calcule le taux réel basé sur les données départementales.
     
     Returns:
         dict avec taux, nombre_vaccines, etc.
     """
-    # 1. PRIORITE: Calculer le taux réel depuis les ACTE (vaccinations réelles)
+    # 1. PRIORITE: Calculer le taux réel depuis les données départementales
+    from app.vaccination import calculer_taux_par_departement
+    from app.config import REGIONS_ZONES
+    
+    # Obtenir tous les départements de cette région
+    tous_departements = calculer_taux_par_departement(annee)
+    region_departements = [d for d in tous_departements if d["code_region"] == str(code_region)]
+    
+    if region_departements:
+        # Calculer les totaux pour la région
+        total_population = sum(d["population_totale"] for d in region_departements)
+        total_vaccines = sum(d["nombre_vaccines"] for d in region_departements)
+        
+        # Calculer le taux régional
+        taux_regional = (total_vaccines / total_population) * 100 if total_population > 0 else 0
+        
+        # Calculer les taux par âge (estimation basée sur le taux national)
+        taux_actes = calculer_taux_reel_depuis_actes(annee)
+        ratio_regional = taux_regional / taux_actes["taux_reel_global"] if taux_actes else 1
+        
+        return {
+            "taux_vaccination": float(round(taux_regional, 1)),
+            "taux_65_plus": float(round(taux_actes["taux_reel_65plus"] * ratio_regional, 1)) if taux_actes else None,
+            "taux_moins_65": float(round(taux_actes["taux_reel_moins65"] * ratio_regional, 1)) if taux_actes else None,
+            "taux_global": float(round(taux_regional, 1)),
+            "population_totale": int(total_population),
+            "nombre_vaccines": int(total_vaccines),
+            "nb_departements": len(region_departements),
+            "source": "ACTE (vaccinations réelles) - calculé par département",
+            "annee": annee,
+            "note": "Taux calculé sur données départementales réelles"
+        }
+    
+    # 2. Fallback: Utiliser le taux national si pas de données départementales
     taux_actes = calculer_taux_reel_depuis_actes(annee)
     
     if taux_actes is not None:
@@ -322,18 +355,10 @@ def get_donnees_vaccination_region(code_region, annee="2024"):
             "taux_65_plus": taux_actes["taux_reel_65plus"],
             "taux_moins_65": taux_actes["taux_reel_moins65"],
             "taux_global": taux_actes["taux_reel_global"],
-            "source": taux_actes["source"],
+            "source": taux_actes["source"] + " (fallback national)",
             "annee": annee,
             "note": taux_actes["note"]
         }
-    
-    # 2. Fallback: Données officielles Santé Publique France (taux populations à risque)
-    taux_reel = get_taux_couverture_reel_region(code_region, annee)
-    
-    if taux_reel is not None:
-        # Ajouter un avertissement que ce sont des taux populations à risque
-        taux_reel["avertissement"] = "Taux pour populations à risque uniquement"
-        return taux_reel
     
     # 3. Fallback: Essayer calcul depuis fichiers IQVIA
     df_couverture = charger_fichier_local(annee, "couverture")
