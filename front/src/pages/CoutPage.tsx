@@ -267,7 +267,7 @@ export const CoutPage = () => {
 		<>
 			{coutNational && (
 				<>
-					<DisplayData title="Coûts Nationaux de la Vaccination" content="Impact financier complet de la vaccination grippe en France" type="card">
+					<DisplayData title="Coûts Nationaux de la Vaccination" content="Impact financier complet de la vaccination grippe en France" type="table">
 						<RowStyle>
 							<CardStyle>
 								<Title>Population Française</Title>

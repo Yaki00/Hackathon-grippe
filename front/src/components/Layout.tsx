@@ -5,7 +5,7 @@ import { useState, useEffect } from 'react';
 const ContainerMain = styled.div`
   display: flex;
   flex-direction: column;
-  height: 100vh;
+  min-height: 100vh;
   margin: 50px auto;
   max-width: 1200px;
   width: 100%;
@@ -100,10 +100,9 @@ export const Layout = ({ children }: { children: React.ReactNode }) => {
 		const handleScroll = () => {
 			const currentScrollY = window.scrollY;
 			
-			if (currentScrollY > lastScrollY && currentScrollY > 200) {
+			if (currentScrollY > 200) {
 				setShowLinksInHeader(true);
-			} 
-			else if (currentScrollY < lastScrollY && currentScrollY < 200) {
+			} else {
 				setShowLinksInHeader(false);
 			}
 			

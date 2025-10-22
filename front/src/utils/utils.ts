@@ -129,4 +129,15 @@ function aggregateByZoneAndYear(data) {
 
   return finalData;
 }
-export { groupByZone, aggregateByZoneAndYear };
+
+const formatGrippeData = (data) => {
+  console.log("Formatting gripe data:", data);
+  return data.zones.map(zone => ({
+    zone: zone.zone_nom,
+    global: zone.statistiques.taux_moyen_global,
+    plus65: zone.statistiques.taux_moyen_65_plus,
+    moins65: zone.statistiques.taux_moyen_moins_65,
+  }));
+};
+
+export { groupByZone, aggregateByZoneAndYear, formatGrippeData };

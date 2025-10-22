@@ -3,6 +3,7 @@ import { CartesianGrid, XAxis, YAxis, Tooltip } from 'recharts';
 const CustomLegend = () => {
   return (
     <div style={{ color: '#eee', fontSize: 14, lineHeight: 1.6, marginLeft: 20, minWidth: 200 }}>
+      <div style={{ marginBottom: 10, fontWeight: 'bold', color: '#aaa' }}>Tranche d'âge: 15-16 ans</div>
       <div><span style={{ color: '#6a89cc' }}>■</span> Zone A filles dose 1</div>
       <div><span style={{ color: '#78e08f' }}>■</span> Zone B filles dose 1</div>
       <div><span style={{ color: '#f6b93b' }}>■</span> Zone C filles dose 1</div>
@@ -25,7 +26,6 @@ export const CustomLineChart = ({dataHpvByZone}) => {
           itemStyle={{ color: '#fff' }}
           formatter={(value) => `${value}%`}
         />
-        {/* Pas de Legend ici */}
         <Line type="monotone" dataKey="zoneA_dose1_filles" stroke="#6a89cc" strokeWidth={2} />
         <Line type="monotone" dataKey="zoneB_dose1_filles" stroke="#78e08f" strokeWidth={2} />
         <Line type="monotone" dataKey="zoneC_dose1_filles" stroke="#f6b93b" strokeWidth={2} />
